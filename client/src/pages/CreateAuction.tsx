@@ -105,7 +105,7 @@ const CreateAuction: React.FC = () => {
       createAuctionMutation.mutate(data);
     } catch (err: any) {
       if (err instanceof ZodError) {
-        setFormError(err.errors[0].message);
+        setFormError(err.issues[0].message);
       } else {
         setFormError(err.message || 'Validation failed');
       }

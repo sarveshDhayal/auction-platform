@@ -57,7 +57,7 @@ const LoginRegister: React.FC = () => {
       navigate('/');
     } catch (err: any) {
       if (err instanceof ZodError) {
-        setError(err.errors[0].message);
+        setError(err.issues[0].message);
       } else {
         setError(err.message || 'Authentication failed');
       }

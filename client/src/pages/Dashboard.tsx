@@ -7,7 +7,7 @@ import GlassCard from '../components/ui/GlassCard';
 import { Activity, Gavel, Trophy, DollarSign, ChevronRight, LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { Auction } from '../types';
+import type { Auction } from '../types/index';
 
 interface StatCardProps {
   title: string;

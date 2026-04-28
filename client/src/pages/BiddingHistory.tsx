@@ -108,7 +108,7 @@ const BiddingHistory: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
-                  {filteredData.map((row) => {
+                  {filteredData.map((row: HistoryItem) => {
                     const Icon = getStatusIcon(row.status, row.isWinning);
                     const colorClass = getStatusColor(row.status, row.isWinning);
                     const statusText = row.status === 'ended' && row.isWinning ? 'Won' : row.isWinning ? 'Winning' : 'Outbid';

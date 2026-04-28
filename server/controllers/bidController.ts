@@ -54,7 +54,7 @@ class BidController extends BaseController {
         return acc;
       }, []);
 
-      this.sendSuccess(res, history, 'Bidding history retrieved successfully');
+      this.sendSuccess(res, history, 200, 'Bidding history retrieved successfully');
     } catch (error) {
       this.sendError(res, 'Failed to fetch bidding history');
     }

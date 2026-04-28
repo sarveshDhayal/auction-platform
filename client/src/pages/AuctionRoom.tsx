@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, AlertTriangle, ArrowLeft } from 'lucide-react';
@@ -18,7 +18,7 @@ import CheckoutForm from '../components/CheckoutForm';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { Auction, Bid, User } from '../types';
+import type { Bid, User } from '../types/index';
 
 export default function AuctionRoom() {
   const { id } = useParams<{ id: string }>();

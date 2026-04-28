@@ -70,7 +70,7 @@ export const getTransactions = async (req: any, res: Response) => {
     const userId = req.user.id;
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId },
+      where: { buyerId: userId },
       include: {
         auction: {
           select: {

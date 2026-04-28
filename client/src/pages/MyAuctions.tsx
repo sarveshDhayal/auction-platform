@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import AuctionCard from '../components/AuctionCard';
 import { Gavel, Search } from 'lucide-react';
 import api from '../services/api';
-import { Auction } from '../types';
+import type { Auction } from '../types/index';
 
 const MyAuctions: React.FC = () => {
   const [auctions, setAuctions] = useState<Auction[]>([]);
