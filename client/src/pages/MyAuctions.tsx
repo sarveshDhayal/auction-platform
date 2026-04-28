@@ -39,7 +39,7 @@ const MyAuctions: React.FC = () => {
     <div className="flex gap-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pb-20">
       <Sidebar />
       <div className="flex-1">
-        
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white mb-1">My Auctions</h1>
@@ -52,15 +52,15 @@ const MyAuctions: React.FC = () => {
 
         <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
           <div className="flex gap-4 w-full sm:w-auto">
-             <button className="px-4 py-2 text-sm font-medium bg-primary/20 text-primary border border-primary/30 rounded-lg">All Active</button>
-             <button className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-white transition-colors">Completed</button>
-             <button className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-white transition-colors">Drafts</button>
+            <button className="px-4 py-2 text-sm font-medium bg-primary/20 text-primary border border-primary/30 rounded-lg">All Active</button>
+            <button className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-white transition-colors">Completed</button>
+            <button className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-white transition-colors">Drafts</button>
           </div>
           <div className="relative w-full sm:w-64">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-            <input 
-              type="text" 
-              placeholder="Search my auctions..." 
+            <input
+              type="text"
+              placeholder="Search my auctions..."
               className="w-full bg-black/20 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-primary/50 text-white"
             />
           </div>
@@ -72,10 +72,10 @@ const MyAuctions: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {auctions.map((auction) => (
               <div key={auction.id} onClick={() => navigate(`/auction/${auction.id}`)} className="cursor-pointer">
-                <AuctionCard 
-                  auction={auction} 
+                <AuctionCard
+                  auction={auction}
                   isWatchlisted={false}
-                  onToggleWatchlist={() => {}}
+                  onToggleWatchlist={() => { }}
                 />
               </div>
             ))}
@@ -83,7 +83,7 @@ const MyAuctions: React.FC = () => {
         ) : (
           <div className="text-center py-20 border border-white/5 rounded-2xl bg-white/5">
             <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-               <Gavel className="w-8 h-8 text-text-secondary" />
+              <Gavel className="w-8 h-8 text-text-secondary" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">No auctions yet</h3>
             <p className="text-text-secondary mb-6 max-w-sm mx-auto">You haven't created any auctions. Start selling your items today to a global audience.</p>

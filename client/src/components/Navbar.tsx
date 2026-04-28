@@ -51,7 +51,7 @@ const Navbar: React.FC = () => {
                     className="flex items-center gap-2 focus:outline-none"
                   >
                     <img
-                      src={(user as any).avatar || `https://ui-avatars.com/api/?name=${(user as any).name}`}
+                      src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.name}`}
                       alt="Profile"
                       className="w-8 h-8 rounded-full border border-white/20 bg-white/10"
                     />
@@ -66,13 +66,13 @@ const Navbar: React.FC = () => {
                         className="absolute right-0 mt-2 w-48 rounded-xl bg-background border border-white/10 shadow-2xl py-1 overflow-hidden"
                       >
                         <div className="px-4 py-2 border-b border-white/10">
-                          <p className="text-sm font-medium text-white truncate">{(user as any).name}</p>
-                          <p className="text-xs text-text-secondary truncate">{(user as any).email}</p>
+                          <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                          <p className="text-xs text-text-secondary truncate">{user?.email}</p>
                         </div>
                         <Link to="/" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:bg-white/5 hover:text-white transition-colors">
                           <LayoutDashboard className="w-4 h-4" /> Dashboard
                         </Link>
-                        {(user as any).role === 'admin' && (
+                        {user?.role === 'admin' && (
                           <Link to="/admin" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-white/5 transition-colors">
                             <Menu className="w-4 h-4" /> Admin Panel
                           </Link>

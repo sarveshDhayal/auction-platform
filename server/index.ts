@@ -7,6 +7,7 @@ import auctionRoutes from './routes/auctions';
 import paymentRoutes from './routes/payments';
 import adminRoutes from './routes/admin';
 import watchlistRoutes from './routes/watchlist';
+import bidRoutes from './routes/bids';
 import { initSocket } from './socket/bidHandler';
 import { startTimerWorker } from './services/timerService';
 
@@ -34,6 +35,7 @@ app.use('/api/auctions', auctionRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/watchlist', watchlistRoutes);
+app.use('/api/bids', bidRoutes);
 
 // Health Check
 app.get('/api/health', (req: Request, res: Response) => {

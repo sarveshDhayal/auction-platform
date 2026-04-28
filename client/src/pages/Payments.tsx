@@ -1,19 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import GlassCard from '../components/ui/GlassCard';
 import Button from '../components/ui/Button';
 import { CreditCard, DollarSign, Download, ArrowRight, ShieldCheck, CheckCircle2, Package, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface Transaction {
-  id: string;
-  item: string;
-  date: string;
-  amount: string;
-  status: 'Completed' | 'Pending';
-  type: 'Purchase' | 'Deposit' | 'Hold';
-}
+import { useQuery } from '@tanstack/react-query';
+import api from '../services/api';
 
 const Payments: React.FC = () => {
   const location = useLocation();
@@ -21,12 +14,27 @@ const Payments: React.FC = () => {
   const [isPaid, setIsPaid] = useState<boolean>(false);
   const checkoutItem = location.state?.item;
 
-  const transactions: Transaction[] = [
-    { id: 'TXN-001', item: 'Vintage 1960s Rolex Submariner', date: 'Oct 15, 2023', amount: '$12,400.00', status: 'Completed', type: 'Purchase' },
-    { id: 'TXN-002', item: 'Apple MacBook Pro M3 Max', date: 'Oct 10, 2023', amount: '$4,100.00', status: 'Completed', type: 'Purchase' },
-    { id: 'TXN-003', item: 'Deposit Funds', date: 'Sep 28, 2023', amount: '$5,000.00', status: 'Completed', type: 'Deposit' },
-    { id: 'TXN-004', item: 'Sony A7RV Camera Body', date: 'Oct 24, 2023', amount: '$3,250.00', status: 'Pending', type: 'Hold' },
-  ];
+  const { data: transactions = [], isLoading } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: async () => {
+      const response = await api.get<any>('/payments/history');
+      return response.data.data.map((txn: any) => ({
+        id: txn.id,
+        item: txn.auction?.title || 'Unknown Item',
+        date: new Date(txn.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        amount: `$${Number(txn.amount).toLocaleString()}`,
+        status: txn.status.charAt(0).toUpperCase() + txn.status.slice(1),
+        type: 'Purchase',
+        numericAmount: Number(txn.amount)
+      }));
+    }
+  });
+
+  const totalSpent = useMemo(() => {
+    return transactions
+      .filter((t: any) => t.status === 'Completed')
+      .reduce((sum: number, t: any) => sum + t.numericAmount, 0);
+  }, [transactions]);
 
   return (
     <div className="flex gap-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pb-20">
@@ -134,7 +142,7 @@ const Payments: React.FC = () => {
                   </div>
                   <div className="relative z-10">
                     <p className="text-sm font-medium text-text-secondary mb-1">Total Spent</p>
-                    <h2 className="text-4xl font-bold text-white mb-4">$16,500.00</h2>
+                    <h2 className="text-4xl font-bold text-white mb-4">${totalSpent.toLocaleString()}</h2>
                     <div className="flex items-center gap-2 text-sm text-success">
                       <ShieldCheck className="w-4 h-4" /> Securely processed via Stripe
                     </div>
@@ -170,37 +178,43 @@ const Payments: React.FC = () => {
                   </button>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-white/5 border-b border-white/10">
-                        <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Transaction ID</th>
-                        <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Description</th>
-                        <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Date</th>
-                        <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Amount</th>
-                        <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10">
-                      {transactions.map((txn) => (
-                        <tr key={txn.id} className="hover:bg-white/[0.02] transition-colors group">
-                          <td className="px-6 py-4 text-sm font-mono text-text-secondary group-hover:text-white transition-colors">{txn.id}</td>
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-white">{txn.item}</div>
-                            <div className="text-xs text-text-secondary">{txn.type}</div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-text-secondary">{txn.date}</td>
-                          <td className="px-6 py-4 text-sm font-semibold text-white text-right">{txn.amount}</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                              txn.status === 'Completed' ? 'bg-success/10 text-success border-success/20' : 'bg-warning/10 text-warning border-warning/20'
-                            }`}>
-                              {txn.status}
-                            </span>
-                          </td>
+                  {isLoading ? (
+                    <div className="text-center py-20 text-text-secondary">Loading transactions...</div>
+                  ) : transactions.length === 0 ? (
+                    <div className="text-center py-20 text-text-secondary">No transactions found.</div>
+                  ) : (
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-white/5 border-b border-white/10">
+                          <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Transaction ID</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Description</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Date</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Amount</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {transactions.map((txn: any) => (
+                          <tr key={txn.id} className="hover:bg-white/[0.02] transition-colors group">
+                            <td className="px-6 py-4 text-sm font-mono text-text-secondary group-hover:text-white transition-colors">{txn.id}</td>
+                            <td className="px-6 py-4">
+                              <div className="font-medium text-white">{txn.item}</div>
+                              <div className="text-xs text-text-secondary">{txn.type}</div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-text-secondary">{txn.date}</td>
+                            <td className="px-6 py-4 text-sm font-semibold text-white text-right">{txn.amount}</td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                                txn.status === 'Completed' ? 'bg-success/10 text-success border-success/20' : 'bg-warning/10 text-warning border-warning/20'
+                              }`}>
+                                {txn.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </GlassCard>
             </div>

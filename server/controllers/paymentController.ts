@@ -59,3 +59,30 @@ export const confirmPayment = async (req: Request, res: Response) => {
     res.status(500).json({ status: 'error', message: 'Failed to confirm payment' });
   }
 };
+
+/**
+ * @desc    Get all transactions for the current user
+ * @route   GET /api/payments/history
+ * @access  Private
+ */
+export const getTransactions = async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+
+    const transactions = await prisma.transaction.findMany({
+      where: { userId },
+      include: {
+        auction: {
+          select: {
+            title: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.status(200).json({ status: 'success', data: transactions });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Failed to fetch transactions' });
+  }
+};

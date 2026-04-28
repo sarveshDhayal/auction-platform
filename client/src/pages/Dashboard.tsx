@@ -139,7 +139,7 @@ const Dashboard: React.FC = () => {
       <div className="flex-1">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-1">Welcome back, {(user as any)?.name?.split(' ')[0] || 'User'}!</h1>
+            <h1 className="text-3xl font-bold text-white mb-1">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</h1>
             <p className="text-text-secondary">Here's what's happening with your auctions today.</p>
           </div>
           <Link to="/create-auction" className="px-5 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-blue-600 transition-colors shadow-lg shadow-primary/30 flex items-center gap-2">

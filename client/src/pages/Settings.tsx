@@ -11,8 +11,8 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('profile');
   
   // Form states
-  const [name, setName] = useState<string>((user as any)?.name || '');
-  const [email, setEmail] = useState<string>((user as any)?.email || '');
+  const [name, setName] = useState<string>(user?.name || '');
+  const [email, setEmail] = useState<string>(user?.email || '');
 
   return (
     <div className="flex gap-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pb-20">
@@ -70,7 +70,7 @@ const Settings: React.FC = () => {
                   <div className="relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
                     <img 
-                      src={(user as any)?.avatar || 'https://ui-avatars.com/api/?name=' + ((user as any)?.name || 'User')} 
+                      src={user?.avatar || 'https://ui-avatars.com/api/?name=' + (user?.name || 'User')} 
                       alt="Profile" 
                       className="relative w-28 h-28 rounded-full border-2 border-background object-cover shadow-2xl"
                     />
@@ -113,8 +113,8 @@ const Settings: React.FC = () => {
                   </div>
                   <div className="pt-6 border-t border-white/10 flex justify-end gap-4">
                     <Button variant="outline" type="button" onClick={() => {
-                      setName((user as any)?.name || '');
-                      setEmail((user as any)?.email || '');
+                      setName(user?.name || '');
+                      setEmail(user?.email || '');
                     }} className="px-6 py-2.5" isLoading={false}>Cancel</Button>
                     <Button type="submit" className="px-8 py-2.5" isLoading={false}>Save Changes</Button>
                   </div>

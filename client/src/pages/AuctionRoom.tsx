@@ -1,9 +1,13 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';
+
 import Button from '../components/ui/Button';
 import GlassCard from '../components/ui/GlassCard';
 import BidBox from '../components/BidBox';
@@ -19,59 +23,33 @@ import { Auction, Bid, User } from '../types';
 export default function AuctionRoom() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { socket, connected } = useSocket();
   const { user } = useAuth();
 
-  const [auction, setAuction] = useState<Auction | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [watchers, setWatchers] = useState<number>(1);
-  const [bids, setBids] = useState<Bid[]>([]);
   const [showWinnerModal, setShowWinnerModal] = useState<boolean>(false);
   const [winner, setWinner] = useState<User | null>(null);
-  
   const [clientSecret, setClientSecret] = useState<string>('');
   const [showCheckout, setShowCheckout] = useState<boolean>(false);
 
   const stripePromise = loadStripe((import.meta.env.VITE_STRIPE_PUBLIC_KEY as string) || 'pk_test_placeholder');
 
-  useEffect(() => {
-    const fetchAuction = async () => {
-      if (id?.startsWith('mock-')) {
-        const mockData: any = id === 'mock-1' ? {
-          id: 'mock-1',
-          title: 'Sony A7RV Camera Body',
-          description: 'The Sony A7R V is the fifth generation of the company’s high-resolution full-frame mirrorless series.',
-          image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80',
-          currentHighestBid: 3250,
-          minIncrement: 50,
-          endTime: new Date(Date.now() + 3600000 * 2).toISOString(),
-          status: 'active',
-          seller: { fullName: 'CameraStorePro', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CameraStore' },
-          category: 'Electronics'
-        } : {
-          id: 'mock-2',
-          title: 'Vintage 1960s Rolex Submariner',
-          description: 'A classic 1960s Rolex Submariner in excellent condition.',
-          image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80',
-          currentHighestBid: 12400,
-          minIncrement: 100,
-          endTime: new Date(Date.now() + 3600000 * 24).toISOString(),
-          status: 'active',
-          seller: { fullName: 'VintageTime', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vintage' },
-          category: 'Luxury'
-        };
-        
-        setAuction(mockData);
-        setBids([]);
-        setLoading(false);
-        return;
-      }
+  const { data: auctionData, isLoading, error } = useQuery({
+    queryKey: ['auction', id],
+    queryFn: async () => {
+      const response = await api.get<any>(`/auctions/${id}`);
+      const data = response.data.data;
+      
+      const formattedBids: Bid[] = (data.bids || []).map((b: any) => ({
+        id: b.id,
+        user: { name: b.bidder.fullName, avatar: b.bidder.avatarUrl, id: b.bidder.id },
+        amount: parseFloat(b.amount),
+        time: b.createdAt
+      }));
 
-      try {
-        const response = await api.get<any>(`/auctions/${id}`);
-        const data = response.data.data;
-        const formattedAuction: any = {
+      return {
+        auction: {
           id: data.id,
           title: data.title,
           description: data.description,
@@ -82,34 +60,39 @@ export default function AuctionRoom() {
           status: data.status,
           seller: data.seller,
           category: data.category
-        };
-        setAuction(formattedAuction);
-        
-        if (data.bids) {
-          const formattedBids: Bid[] = data.bids.map((b: any) => ({
-            id: b.id,
-            user: { name: b.bidder.fullName, avatar: b.bidder.avatarUrl, id: b.bidder.id },
-            amount: parseFloat(b.amount),
-            time: b.createdAt
-          }));
-          setBids(formattedBids);
-        }
+        },
+        bids: formattedBids,
+        winner: data.winner
+      };
+    },
+    enabled: !!id
+  });
 
-        if (data.status === 'ended') {
-          setWinner(data.winner);
-          setShowWinnerModal(true);
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to load auction');
-      } finally {
-        setLoading(false);
+  const auction = auctionData?.auction;
+  const bids = auctionData?.bids || [];
+
+  const triggerConfetti = useCallback(() => {
+    const duration = 5 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+    const interval: any = setInterval(function() {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
       }
-    };
-    fetchAuction();
-  }, [id]);
+
+      const particleCount = 50 * (timeLeft / duration);
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+    }, 250);
+  }, []);
 
   useEffect(() => {
-    if (!socket || !connected || !auction) return;
+    if (!socket || !connected || !id) return;
 
     socket.emit('join_auction', { auctionId: id });
 
@@ -118,32 +101,70 @@ export default function AuctionRoom() {
     });
 
     socket.on('new_bid', (newBid: Bid) => {
-      setBids(prev => [newBid, ...prev]);
-      setAuction(prev => prev ? { ...prev, currentHighestBid: newBid.amount } : null);
+      queryClient.setQueryData(['auction', id], (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          auction: { ...oldData.auction, currentHighestBid: newBid.amount },
+          bids: [newBid, ...oldData.bids]
+        };
+      });
+      
+      if (newBid.user.id !== user?.id) {
+        toast(`${newBid.user.name} placed a new bid: $${newBid.amount.toLocaleString()}`, {
+          icon: '💰',
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        });
+      }
+    });
+
+    socket.on('outbid', (data: { auctionTitle: string, newHighestBid: number }) => {
+      toast.error(`You've been outbid on ${data.auctionTitle}! New high bid: $${data.newHighestBid.toLocaleString()}`, {
+        duration: 5000,
+        icon: '⚠️',
+      });
     });
 
     socket.on('auction_ended', (data: { winner: User }) => {
-      setAuction(prev => prev ? { ...prev, status: 'ended' } : null);
+      queryClient.invalidateQueries({ queryKey: ['auction', id] });
       setWinner(data.winner);
       setShowWinnerModal(true);
+      if (data.winner.id === user?.id) {
+        triggerConfetti();
+        toast.success('Congratulations! You won the auction!', { duration: 10000 });
+      }
     });
 
     return () => {
       socket.emit('leave_auction', { auctionId: id });
       socket.off('watchers_update');
       socket.off('new_bid');
+      socket.off('outbid');
       socket.off('auction_ended');
     };
-  }, [socket, connected, auction, id]);
+  }, [socket, connected, id, user?.id, queryClient, triggerConfetti]);
+
+  useEffect(() => {
+    if (auction?.status === 'ended' && auctionData?.winner) {
+      setWinner(auctionData.winner);
+      setShowWinnerModal(true);
+    }
+  }, [auction?.status, auctionData?.winner]);
 
   const handlePlaceBid = async (amount: number): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (!socket || !connected) return reject(new Error('Live connection lost'));
-      
+
       socket.emit('place_bid', { auctionId: id, amount }, (response: any) => {
         if (response.status === 'success') {
+          toast.success('Bid placed successfully!');
           resolve();
         } else {
+          toast.error(response.message);
           reject(new Error(response.message));
         }
       });
@@ -157,15 +178,15 @@ export default function AuctionRoom() {
       setShowCheckout(true);
     } catch (err) {
       console.error('Failed to initialize payment:', err);
-      alert('Failed to initialize payment gateway.');
+      toast.error('Failed to initialize payment gateway.');
     }
   };
 
-  if (loading) return <div className="pt-20"><Loader /></div>;
+  if (isLoading) return <div className="pt-20"><Loader /></div>;
   if (error || !auction) return (
     <div className="pt-20 text-center px-4">
       <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-      <h2 className="text-xl font-semibold text-white mb-4">{error || 'Auction not found'}</h2>
+      <h2 className="text-xl font-semibold text-white mb-4">{(error as any)?.message || 'Auction not found'}</h2>
       <Button onClick={() => navigate('/')} className="px-6 py-2" isLoading={false}>Back to Dashboard</Button>
     </div>
   );
@@ -175,7 +196,7 @@ export default function AuctionRoom() {
 
   return (
     <div className="animate-in fade-in duration-500 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-      <button 
+      <button
         onClick={() => navigate('/')}
         className="flex items-center gap-2 text-text-secondary hover:text-white transition-colors mb-6 group"
       >
@@ -184,19 +205,22 @@ export default function AuctionRoom() {
       </button>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        
+
         <div className="xl:col-span-2 space-y-6">
           <GlassCard className="overflow-hidden relative aspect-video bg-black/40 flex items-center justify-center">
             {auctionImage ? (
-              <img 
-                src={auctionImage} 
-                alt={auction.title} 
+              <motion.img
+                key={auctionImage}
+                initial={{ opacity: 0, scale: 1.1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                src={auctionImage}
+                alt={auction.title}
                 className="max-w-full max-h-full object-contain"
               />
             ) : (
               <div className="text-text-secondary">No Image Available</div>
             )}
-            
+
             <div className="absolute top-4 left-4 flex gap-2">
               {auction.status === 'active' || (auction.status as string) === 'live' ? (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-danger/20 border border-danger/50 backdrop-blur-md">
@@ -221,10 +245,10 @@ export default function AuctionRoom() {
               {auction.description}
             </p>
             <div className="flex items-center gap-4 pt-6 border-t border-white/10">
-              <img 
+              <img
                 src={(auction as any).seller?.avatarUrl || `https://ui-avatars.com/api/?name=${(auction as any).seller?.fullName}`}
-                alt="Seller" 
-                className="w-12 h-12 rounded-full border border-white/10" 
+                alt="Seller"
+                className="w-12 h-12 rounded-full border border-white/10"
               />
               <div>
                 <p className="text-sm font-medium text-white">Verified Seller</p>
@@ -242,24 +266,31 @@ export default function AuctionRoom() {
                   {auction.status === 'active' || (auction.status as string) === 'live' ? 'Time Remaining' : 'Auction Status'}
                 </p>
                 {auction.status === 'active' || (auction.status as string) === 'live' ? (
-                  <Countdown 
-                    targetDate={auction.endTime} 
-                    onEnd={() => setAuction((prev: Auction | null) => prev ? {...prev, status: 'ended'} : null)} 
+                  <Countdown
+                    targetDate={auction.endTime}
+                    onEnd={() => queryClient.invalidateQueries({ queryKey: ['auction', id] })}
                   />
                 ) : (
                   <div className="text-2xl font-bold text-white">Bidding Closed</div>
                 )}
               </div>
-              
+
               <div className="pt-6 border-t border-white/10">
                 <p className="text-sm font-medium text-text-secondary mb-2">Current Bid</p>
-                <div className="text-4xl font-bold text-white">
-                  ${currentHighestBid.toLocaleString()}
-                </div>
+                <AnimatePresence mode="wait">
+                  <motion.div 
+                    key={currentHighestBid}
+                    initial={{ scale: 1.1, color: '#3B82F6' }}
+                    animate={{ scale: 1, color: '#FFFFFF' }}
+                    className="text-4xl font-bold text-white"
+                  >
+                    ${currentHighestBid.toLocaleString()}
+                  </motion.div>
+                </AnimatePresence>
               </div>
 
               {auction.status === 'active' || (auction.status as string) === 'live' ? (
-                <BidBox 
+                <BidBox
                   currentBid={currentHighestBid}
                   minIncrement={(auction as any).minIncrement || 0}
                   onPlaceBid={handlePlaceBid}
@@ -280,13 +311,13 @@ export default function AuctionRoom() {
 
       <AnimatePresence>
         {showWinnerModal && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
@@ -297,14 +328,14 @@ export default function AuctionRoom() {
                   <span className="text-4xl">🏆</span>
                 </div>
                 <h2 className="text-3xl font-bold text-white mb-2">Auction Ended!</h2>
-                
+
                 {winner ? (
                   <div className="space-y-4">
                     <p className="text-text-secondary">Winner: <span className="text-white font-bold">{winner.name || (winner as any).fullName}</span></p>
                     <div className="text-4xl font-bold text-success">
                       ${currentHighestBid.toLocaleString()}
                     </div>
-                    
+
                     {user?.id === winner.id ? (
                       <div className="mt-8 space-y-4">
                         {!showCheckout ? (
@@ -317,12 +348,12 @@ export default function AuctionRoom() {
                         ) : (
                           clientSecret && (
                             <Elements options={{ clientSecret }} stripe={stripePromise}>
-                              <CheckoutForm 
+                              <CheckoutForm
                                 onSuccess={() => {
                                   setShowCheckout(false);
                                   setShowWinnerModal(false);
                                   navigate('/');
-                                }} 
+                                }}
                               />
                             </Elements>
                           )
@@ -335,9 +366,12 @@ export default function AuctionRoom() {
                     )}
                   </div>
                 ) : (
-                  <Button variant="outline" onClick={() => setShowWinnerModal(false)} className="w-full mt-6 py-2" isLoading={false}>
-                    Close
-                  </Button>
+                  <div className="space-y-4">
+                    <p className="text-text-secondary">No bids were placed for this item.</p>
+                    <Button variant="outline" onClick={() => setShowWinnerModal(false)} className="w-full mt-6 py-2" isLoading={false}>
+                      Close
+                    </Button>
+                  </div>
                 )}
               </GlassCard>
             </motion.div>

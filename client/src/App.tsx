@@ -5,6 +5,18 @@ import Footer from './components/Footer';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { Toaster } from 'react-hot-toast';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 30, // 30 seconds
+      retry: 1,
+    },
+  },
+});
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -74,15 +86,29 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <SocketProvider>
-          <GoogleOAuthProvider clientId={(import.meta.env.VITE_GOOGLE_CLIENT_ID as string) || "946106601149-r7vnsqf7h3ilcgo1kga8ju1uc5mitrt1.apps.googleusercontent.com"}>
-            <AppContent />
-          </GoogleOAuthProvider>
-        </SocketProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <SocketProvider>
+            <GoogleOAuthProvider clientId={(import.meta.env.VITE_GOOGLE_CLIENT_ID as string) || "946106601149-r7vnsqf7h3ilcgo1kga8ju1uc5mitrt1.apps.googleusercontent.com"}>
+              <Toaster 
+                position="top-right"
+                toastOptions={{
+                  style: {
+                    background: '#0F172A',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(8px)',
+                  },
+                }}
+              />
+              <AppContent />
+              <ReactQueryDevtools initialIsOpen={false} />
+            </GoogleOAuthProvider>
+          </SocketProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 };
 

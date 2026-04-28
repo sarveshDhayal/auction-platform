@@ -6,6 +6,8 @@ import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { Mail, Lock, User, Gavel, ArrowRight } from 'lucide-react';
+import { loginSchema, registerSchema } from '../schemas';
+import { ZodError } from 'zod';
 
 const LoginRegister: React.FC = () => {
   const [isLogin, setIsLogin] = useState<boolean>(true);
@@ -17,6 +19,7 @@ const LoginRegister: React.FC = () => {
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
@@ -40,19 +43,24 @@ const LoginRegister: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
-
+    
     try {
       if (isLogin) {
+        loginSchema.parse({ email, password });
+        setLoading(true);
         await login(email, password);
       } else {
-        if (!name) throw new Error('Name is required');
+        registerSchema.parse({ fullName: name, email, password, confirmPassword });
+        setLoading(true);
         await register(name, email, password);
       }
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
-    } finally {
+      if (err instanceof ZodError) {
+        setError(err.errors[0].message);
+      } else {
+        setError(err.message || 'Authentication failed');
+      }
       setLoading(false);
     }
   };
@@ -150,6 +158,25 @@ const LoginRegister: React.FC = () => {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 required
               />
+
+              {!isLogin && (
+                <motion.div
+                  key="confirm-password-input"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  <Input 
+                    type="password"
+                    label="Confirm Password" 
+                    placeholder="••••••••" 
+                    icon={Lock}
+                    value={confirmPassword}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+                    required={!isLogin}
+                  />
+                </motion.div>
+              )}
 
               {isLogin && (
                 <div className="flex items-center justify-between mt-2">

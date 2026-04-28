@@ -31,6 +31,11 @@ export const initSocket = (httpServer: any): Server => {
   });
 
   io.on('connection', (socket: CustomSocket) => {
+    // Join a private room for personal notifications
+    if (socket.userId) {
+      socket.join(socket.userId);
+    }
+
     // Join a specific auction room
     socket.on('join_auction', async ({ auctionId }: { auctionId: string }) => {
       socket.join(auctionId);
@@ -84,7 +89,23 @@ export const initSocket = (httpServer: any): Server => {
           })
         ]);
 
-        // 3. Broadcast to everyone in the room
+        // 3. Identify previous highest bidder to send outbid notification
+        const previousBid = await prisma.bid.findFirst({
+          where: { auctionId },
+          orderBy: { amount: 'desc' },
+          skip: 1 // The one we just created is #0
+        });
+
+        if (previousBid && previousBid.bidderId !== socket.userId) {
+          // Send private notification to outbid user
+          io.to(previousBid.bidderId).emit('outbid', {
+            auctionId,
+            auctionTitle: auction.title,
+            newHighestBid: bidAmount
+          });
+        }
+
+        // 4. Broadcast to everyone in the room
         const broadcastData = {
           id: newBid.id,
           amount: newBid.amount,

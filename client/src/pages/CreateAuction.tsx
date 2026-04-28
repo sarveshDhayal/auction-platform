@@ -2,10 +2,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, X, DollarSign, Tag, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import GlassCard from '../components/ui/GlassCard';
 import api from '../services/api';
+
+import { auctionSchema } from '../schemas';
+import { ZodError } from 'zod';
 
 const CATEGORIES = [
   'Digital Art', 'Collectibles', 'Electronics', 'Vehicles', 'Real Estate', 'Antiques'
@@ -24,9 +28,9 @@ interface AuctionFormData {
 
 const CreateAuction: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<AuctionFormData>({
     title: '',
@@ -37,6 +41,22 @@ const CreateAuction: React.FC = () => {
     description: '',
     requiresPaymentVerification: true,
     image: null
+  });
+
+  const createAuctionMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      const response = await api.post<any>('/auctions', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['auctions'] });
+      queryClient.invalidateQueries({ queryKey: ['auctions', 'my'] });
+      navigate(`/auction/${data.id}`);
+    }
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,10 +78,17 @@ const CreateAuction: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-
+    setFormError(null);
+    
     try {
+      // Validate with Zod
+      auctionSchema.parse(formData);
+
+      if (!formData.image) {
+        setFormError('Please upload an image for the auction');
+        return;
+      }
+
       const data = new FormData();
       data.append('title', formData.title);
       data.append('category', formData.category);
@@ -75,19 +102,13 @@ const CreateAuction: React.FC = () => {
         data.append('image', formData.image);
       }
 
-      const response = await api.post<any>('/auctions', data, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      const newAuctionId = response.data.data.id;
-      navigate(`/auction/${newAuctionId}`);
-
+      createAuctionMutation.mutate(data);
     } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Failed to create auction');
-      setLoading(false);
+      if (err instanceof ZodError) {
+        setFormError(err.errors[0].message);
+      } else {
+        setFormError(err.message || 'Validation failed');
+      }
     }
   };
 
@@ -102,9 +123,9 @@ const CreateAuction: React.FC = () => {
         <p className="text-text-secondary mt-2">List your asset for real-time bidding</p>
       </div>
 
-      {error && (
+      {(formError || createAuctionMutation.isError) && (
         <div className="mb-6 p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger">
-          {error}
+          {formError || (createAuctionMutation.error as any)?.response?.data?.message || 'Failed to create auction'}
         </div>
       )}
 
@@ -269,7 +290,7 @@ const CreateAuction: React.FC = () => {
             <Button 
               type="submit" 
               className="w-full h-14 text-lg font-semibold gap-2 shadow-[0_0_20px_rgba(59,130,246,0.3)]"
-              isLoading={loading}
+              isLoading={createAuctionMutation.isPending}
             >
               Launch Auction <ArrowRight className="w-5 h-5" />
             </Button>

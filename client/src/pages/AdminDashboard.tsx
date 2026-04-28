@@ -7,48 +7,58 @@ import Sidebar from '../components/Sidebar';
 import GlassCard from '../components/ui/GlassCard';
 import Badge from '../components/ui/Badge';
 import { Users, AlertTriangle, DollarSign, Activity, ShieldCheck, LucideIcon } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../services/api';
 
-interface RevenueData {
-  name: string;
-  amount: number;
-}
+const AdminDashboard: React.FC = () => {
+  const queryClient = useQueryClient();
 
-const REVENUE_DATA: RevenueData[] = [
-  { name: 'Jan', amount: 4000 },
-  { name: 'Feb', amount: 3000 },
-  { name: 'Mar', amount: 5000 },
-  { name: 'Apr', amount: 4500 },
-  { name: 'May', amount: 7000 },
-  { name: 'Jun', amount: 8500 },
-  { name: 'Jul', amount: 11000 },
-];
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: async () => {
+      const response = await api.get<any>('/admin/stats');
+      return response.data.data;
+    }
+  });
 
-interface PerformanceData {
-  name: string;
-  completed: number;
-  failed: number;
-}
+  const { data: usersData = [], isLoading: usersLoading } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: async () => {
+      const response = await api.get<any>('/admin/users');
+      return response.data.data;
+    }
+  });
 
-const AUCTION_PERFORMANCE: PerformanceData[] = [
-  { name: 'Electronics', completed: 120, failed: 10 },
-  { name: 'Watches', completed: 85, failed: 5 },
-  { name: 'Art', completed: 40, failed: 8 },
-  { name: 'Vehicles', completed: 15, failed: 2 },
-];
+  const updateUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, status }: { userId: string, status: string }) => {
+      return api.patch(`/admin/users/${userId}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    }
+  });
 
-interface RecentUser {
-  id: string;
-  name: string;
-  email: string;
-  status: 'active' | 'suspended';
-  joined: string;
-}
+  const handleUpdateStatus = (userId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    updateUserStatusMutation.mutate({ userId, status: newStatus });
+  };
 
-const RECENT_USERS: RecentUser[] = [
-  { id: 'u1', name: 'John Doe', email: 'john@example.com', status: 'active', joined: '2h ago' },
-  { id: 'u2', name: 'Jane Smith', email: 'jane@example.com', status: 'suspended', joined: '1d ago' },
-  { id: 'u3', name: 'Mike Johnson', email: 'mike@example.com', status: 'active', joined: '3d ago' },
-];
+  const REVENUE_DATA = [
+    { name: 'Jan', amount: 4000 },
+    { name: 'Feb', amount: 3000 },
+    { name: 'Mar', amount: 5000 },
+    { name: 'Apr', amount: 4500 },
+    { name: 'May', amount: 7000 },
+    { name: 'Jun', amount: 8500 },
+    { name: 'Jul', amount: statsData?.totalRevenue || 11000 },
+  ];
+
+  const AUCTION_PERFORMANCE = [
+    { name: 'Electronics', completed: 120, failed: 10 },
+    { name: 'Watches', completed: 85, failed: 5 },
+    { name: 'Art', completed: 40, failed: 8 },
+    { name: 'Vehicles', completed: 15, failed: 2 },
+  ];
 
 interface StatCardProps {
   title: string;
@@ -77,7 +87,8 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend, co
   </GlassCard>
 );
 
-const AdminDashboard: React.FC = () => {
+  if (statsLoading || usersLoading) return <div className="pt-20 text-center text-text-secondary">Loading Admin Panel...</div>;
+
   return (
     <div className="flex gap-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pb-20">
       <Sidebar isAdmin={true} />
@@ -90,10 +101,10 @@ const AdminDashboard: React.FC = () => {
 
         {/* Top Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard title="Total Revenue" value="$45,231" icon={DollarSign} trend={12.5} colorClass="text-success" />
-          <StatCard title="Active Users" value="2,845" icon={Users} trend={5.2} colorClass="text-primary" />
-          <StatCard title="Live Auctions" value="156" icon={Activity} trend={-2.4} colorClass="text-warning" />
-          <StatCard title="Flagged Items" value="12" icon={AlertTriangle} trend={0} colorClass="text-danger" />
+          <StatCard title="Total Revenue" value={`$${(statsData?.totalRevenue || 0).toLocaleString()}`} icon={DollarSign} trend={12.5} colorClass="text-success" />
+          <StatCard title="Total Users" value={(statsData?.totalUsers || 0).toString()} icon={Users} trend={5.2} colorClass="text-primary" />
+          <StatCard title="Active Auctions" value={(statsData?.activeAuctions || 0).toString()} icon={Activity} trend={-2.4} colorClass="text-warning" />
+          <StatCard title="Total Sales" value={(statsData?.completedTransactions || 0).toString()} icon={ShieldCheck} trend={0} colorClass="text-danger" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
@@ -153,25 +164,26 @@ const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
-                  {RECENT_USERS.map((user) => (
+                  {usersData.map((user: any) => (
                     <tr key={user.id} className="hover:bg-white/5 transition-colors">
                       <td className="p-4">
-                        <p className="font-medium text-white">{user.name}</p>
+                        <p className="font-medium text-white">{user.fullName}</p>
                         <p className="text-xs text-text-secondary">{user.email}</p>
                       </td>
-                      <td className="p-4 text-sm text-text-secondary">{user.joined}</td>
+                      <td className="p-4 text-sm text-text-secondary">{new Date(user.createdAt).toLocaleDateString()}</td>
                       <td className="p-4">
                         <Badge variant={user.status === 'active' ? 'success' : 'danger'}>
                           {user.status}
                         </Badge>
                       </td>
                       <td className="p-4 text-right">
-                        <button className="text-text-secondary hover:text-white transition-colors mr-3">Edit</button>
-                        {user.status === 'active' ? (
-                          <button className="text-danger hover:text-red-400 transition-colors">Suspend</button>
-                        ) : (
-                          <button className="text-success hover:text-emerald-400 transition-colors">Activate</button>
-                        )}
+                        <button 
+                          className={`text-sm font-medium transition-colors ${user.status === 'active' ? 'text-danger hover:text-red-400' : 'text-success hover:text-emerald-400'}`}
+                          onClick={() => handleUpdateStatus(user.id, user.status)}
+                          disabled={updateUserStatusMutation.isPending}
+                        >
+                          {user.status === 'active' ? 'Suspend' : 'Activate'}
+                        </button>
                       </td>
                     </tr>
                   ))}
