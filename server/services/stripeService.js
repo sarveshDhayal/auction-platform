@@ -1,28 +1,59 @@
-// server/services/stripeService.js
-const Stripe = require('stripe');
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+import Stripe from 'stripe';
+import dotenv from 'dotenv';
+import { prisma } from '../config/db.js';
 
-// Create a hold (authorize) — card is held but NOT charged yet
-async function createHold(userId, amount, paymentMethodId) {
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(amount * 100), // Stripe uses cents
-    currency: 'usd',
-    payment_method: paymentMethodId,
-    confirm: true,
-    capture_method: 'manual', // <-- KEY: authorize only, capture later
-    return_url: 'http://localhost:3000/auctions',
-  });
-  return paymentIntent;
-}
+dotenv.config();
 
-// Release a hold when someone is outbid
-async function releaseHold(paymentIntentId) {
-  await stripe.paymentIntents.cancel(paymentIntentId);
-}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16', // Always hardcode or carefully manage the API version
+});
 
-// Capture payment when auction ends — winner is charged
-async function capturePayment(paymentIntentId) {
-  await stripe.paymentIntents.capture(paymentIntentId);
-}
+/**
+ * Creates a PaymentIntent for the winning bid of an auction.
+ */
+export const createAuctionPaymentIntent = async (auctionId, userId) => {
+  try {
+    // 1. Fetch the transaction record
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        auctionId: auctionId,
+        buyerId: userId,
+        status: 'pending'
+      },
+      include: { auction: true }
+    });
 
-module.exports = { createHold, releaseHold, capturePayment };
+    if (!transaction) {
+      throw new Error('No pending transaction found for this user and auction.');
+    }
+
+    // 2. Stripe expects amounts in cents for USD
+    const amountInCents = Math.round(parseFloat(transaction.amount) * 100);
+
+    // 3. Create a PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: process.env.STRIPE_CURRENCY || 'usd',
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      metadata: {
+        transactionId: transaction.id,
+        auctionId: auctionId,
+        buyerId: userId
+      }
+    });
+
+    // 4. Update transaction with the Stripe intent ID
+    await prisma.transaction.update({
+      where: { id: transaction.id },
+      data: { stripePaymentIntentId: paymentIntent.id }
+    });
+
+    return paymentIntent;
+
+  } catch (error) {
+    console.error('Stripe Service Error:', error);
+    throw error;
+  }
+};

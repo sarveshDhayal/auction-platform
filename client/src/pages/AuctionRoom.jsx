@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Eye, Info, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import Button from '../components/ui/Button';
 import GlassCard from '../components/ui/GlassCard';
 import BidBox from '../components/BidBox';
 import BidHistory from '../components/BidHistory';
 import Countdown from '../components/Countdown';
 import Loader from '../components/Loader';
+import CheckoutForm from '../components/CheckoutForm';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -25,6 +28,13 @@ export default function AuctionRoom() {
   const [bids, setBids] = useState([]);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [winner, setWinner] = useState(null);
+  
+  // Stripe state
+  const [clientSecret, setClientSecret] = useState('');
+  const [showCheckout, setShowCheckout] = useState(false);
+
+  // Initialize Stripe (Must be outside component or using environment variable)
+  const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_placeholder');
 
   // 1. Fetch initial auction data
   useEffect(() => {
@@ -102,6 +112,18 @@ export default function AuctionRoom() {
         }
       });
     });
+  };
+
+  const handleProceedToPayment = async () => {
+    try {
+      // Create PaymentIntent on the backend
+      const res = await api.post('/payments/create-intent', { auctionId: id });
+      setClientSecret(res.data.data.clientSecret);
+      setShowCheckout(true);
+    } catch (err) {
+      console.error('Failed to initialize payment:', err);
+      alert('Failed to initialize payment gateway.');
+    }
   };
 
   if (loading) return <div className="pt-20"><Loader /></div>;
@@ -289,10 +311,32 @@ export default function AuctionRoom() {
 
                     {user?.id === (winner.id || winner.bidderId) ? (
                       <div className="mt-8 space-y-3">
-                        <p className="text-sm font-medium text-emerald-400">Congratulations! You won this auction.</p>
-                        <Button className="w-full h-12 shadow-[0_0_15px_rgba(52,211,153,0.3)]">
-                          Proceed to Payment
-                        </Button>
+                        {!showCheckout ? (
+                          <>
+                            <p className="text-sm font-medium text-emerald-400">Congratulations! You won this auction.</p>
+                            <Button onClick={handleProceedToPayment} className="w-full h-12 shadow-[0_0_15px_rgba(52,211,153,0.3)]">
+                              Proceed to Payment
+                            </Button>
+                          </>
+                        ) : (
+                          clientSecret && (
+                            <Elements options={{ clientSecret, appearance: { theme: 'night' } }} stripe={stripePromise}>
+                              <div className="text-left mt-4">
+                                <CheckoutForm 
+                                  auctionId={id} 
+                                  onSuccess={() => {
+                                    setShowCheckout(false);
+                                    setShowWinnerModal(false);
+                                    navigate('/dashboard'); // Or to an invoice page
+                                  }} 
+                                />
+                                <Button variant="secondary" onClick={() => setShowCheckout(false)} className="w-full mt-4">
+                                  Cancel
+                                </Button>
+                              </div>
+                            </Elements>
+                          )
+                        )}
                       </div>
                     ) : (
                       <div className="mt-6">

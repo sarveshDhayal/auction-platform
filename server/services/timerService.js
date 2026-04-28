@@ -1,8 +1,7 @@
 import redis from '../config/redis.js';
 import { prisma } from '../config/db.js';
-// We'll import the io instance dynamically to avoid circular dependencies if needed,
-// but for simplicity, we can pass it or require it where needed.
 import { getIo } from '../socket/bidHandler.js';
+import { sendWinnerEmail } from './emailService.js';
 
 const AUCTION_ZSET_KEY = 'active_auctions';
 
@@ -72,7 +71,13 @@ const processExpiredAuction = async (auctionId) => {
         }
       });
       
-      // TODO: Trigger Email Notification Service here
+      // Send Email Notification to Winner
+      await sendWinnerEmail(
+        highestBid.bidder.email,
+        highestBid.bidder.fullName,
+        highestBid.auction.title,
+        highestBid.amount
+      );
     }
 
   } catch (error) {

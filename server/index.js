@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import http from 'http';
 import authRoutes from './routes/auth.js';
 import auctionRoutes from './routes/auctions.js';
+import paymentRoutes from './routes/payments.js';
 import { initSocket } from './socket/bidHandler.js';
 import { startTimerWorker } from './services/timerService.js';
 
@@ -28,6 +29,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/auctions', auctionRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
