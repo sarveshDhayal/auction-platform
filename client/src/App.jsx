@@ -1,0 +1,47 @@
+import { Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+
+// Pages
+import Dashboard from './pages/Dashboard';
+import LoginRegister from './pages/LoginRegister';
+import CreateAuction from './pages/CreateAuction';
+import AuctionRoom from './pages/AuctionRoom';
+import AdminDashboard from './pages/AdminDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
+
+function App() {
+  return (
+    <div className="flex flex-col min-h-screen text-text-primary">
+      <Navbar />
+      <main className="flex-grow pt-20 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <Routes>
+          <Route path="/auth" element={<LoginRegister />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/create-auction" element={
+            <ProtectedRoute>
+              <CreateAuction />
+            </ProtectedRoute>
+          } />
+          <Route path="/auction/:id" element={
+            <ProtectedRoute>
+              <AuctionRoom />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+export default App;
