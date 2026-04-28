@@ -1,49 +1,49 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-import { useAuth } from './AuthContext';
 
 const SocketContext = createContext();
 
 export const useSocket = () => useContext(SocketContext);
 
-// Mock socket URL for frontend dev, will connect when backend is ready
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const { user } = useAuth();
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    // Only connect if user is logged in
-    if (user) {
-      const newSocket = io(SOCKET_URL, {
-        autoConnect: false,
-        auth: {
-          token: localStorage.getItem('token')
-        }
-      });
+    // Only connect if we have a token
+    const token = localStorage.getItem('token');
+    
+    if (!token) return;
 
-      // Connect but catch errors silently if backend is offline during frontend dev
-      newSocket.connect();
-      
-      newSocket.on('connect', () => {
-        console.log('Socket connected:', newSocket.id);
-      });
+    const newSocket = io(SOCKET_URL, {
+      auth: { token },
+      transports: ['websocket'],
+    });
 
-      newSocket.on('connect_error', (err) => {
-        console.warn('Socket connection error (expected if backend offline):', err.message);
-      });
+    newSocket.on('connect', () => {
+      // console.log('🟢 Connected to WebSocket');
+      setConnected(true);
+    });
 
-      setSocket(newSocket);
+    newSocket.on('disconnect', () => {
+      // console.log('🔴 Disconnected from WebSocket');
+      setConnected(false);
+    });
 
-      return () => {
-        newSocket.disconnect();
-      };
-    }
-  }, [user]);
+    setSocket(newSocket);
+
+    return () => newSocket.disconnect();
+  }, []); // Note: Might need to re-run if token changes, but a full reload usually handles this
+
+  const value = {
+    socket,
+    connected,
+  };
 
   return (
-    <SocketContext.Provider value={socket}>
+    <SocketContext.Provider value={value}>
       {children}
     </SocketContext.Provider>
   );

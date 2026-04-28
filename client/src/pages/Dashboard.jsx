@@ -1,42 +1,12 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import AuctionCard from '../components/AuctionCard';
 import GlassCard from '../components/ui/GlassCard';
-import { Activity, Gavel, Trophy, DollarSign, ArrowRight } from 'lucide-react';
+import { Activity, Gavel, Trophy, DollarSign, ArrowRight, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-const mockAuctions = [
-  {
-    id: '1',
-    title: 'Vintage Rolex Submariner 1980',
-    description: 'Rare vintage Rolex Submariner in excellent condition with original box and papers. A collector\'s dream piece.',
-    image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=800&auto=format&fit=crop',
-    currentBid: 12500,
-    timeLeft: '00:15:42',
-    watchers: 342,
-    status: 'live'
-  },
-  {
-    id: '2',
-    title: 'MacBook Pro M3 Max 128GB',
-    description: 'Brand new, sealed MacBook Pro 16-inch with M3 Max chip, 128GB Unified Memory, and 4TB SSD.',
-    image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=800&auto=format&fit=crop',
-    currentBid: 4200,
-    timeLeft: '02:45:10',
-    watchers: 156,
-    status: 'live'
-  },
-  {
-    id: '3',
-    title: 'Sony A7RV Camera Body',
-    description: 'Lightly used Sony A7RV. Shutter count under 5000. Includes extra battery and 128GB CFexpress Type A card.',
-    image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=800&auto=format&fit=crop',
-    currentBid: 2800,
-    timeLeft: '12:30:00',
-    watchers: 89,
-    status: 'live'
-  }
-];
+import api from '../services/api';
 
 const StatCard = ({ title, value, icon: Icon, trend, trendUp }) => (
   <GlassCard className="p-5 flex items-start justify-between">
@@ -57,6 +27,32 @@ const StatCard = ({ title, value, icon: Icon, trend, trendUp }) => (
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [auctions, setAuctions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAuctions = async () => {
+      try {
+        const response = await api.get('/auctions?limit=6');
+        const formatted = response.data.data.map(a => ({
+          id: a.id,
+          title: a.title,
+          image: a.imageUrl || 'https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?auto=format&fit=crop&q=80',
+          currentBid: parseFloat(a.currentHighestBid || a.startingPrice),
+          endTime: a.endTime,
+          bids: a.bids?.length || 0,
+          watchers: Math.floor(Math.random() * 50) + 1
+        }));
+        setAuctions(formatted);
+      } catch (error) {
+        console.error('Failed to fetch auctions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAuctions();
+  }, []);
 
   return (
     <div className="flex gap-8">
@@ -73,7 +69,6 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard title="Active Bids" value="12" icon={Activity} trend="14%" trendUp={true} />
           <StatCard title="Auctions Created" value="4" icon={Gavel} trend="2" trendUp={true} />
@@ -82,26 +77,36 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content - Live Auctions */}
-          <div className="lg:col-span-2">
-            <div className="flex justify-between items-center mb-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-danger animate-pulse"></span>
-                Live Recommended Auctions
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                Recommended Auctions
               </h2>
-              <a href="#" className="text-sm font-medium text-primary hover:text-white transition-colors flex items-center gap-1">
-                View all <ArrowRight className="w-4 h-4" />
-              </a>
+              <button className="text-sm font-medium text-primary hover:text-white transition-colors flex items-center">
+                View All <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {mockAuctions.slice(0,2).map(auction => (
-                <AuctionCard key={auction.id} auction={auction} />
-              ))}
-            </div>
+            {loading ? (
+              <div className="text-center text-text-secondary py-10">Loading auctions...</div>
+            ) : auctions.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {auctions.map((auction) => (
+                  <AuctionCard 
+                    key={auction.id} 
+                    auction={auction} 
+                    onClick={() => navigate(`/auction/${auction.id}`)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-text-secondary py-10 border border-white/5 rounded-xl bg-white/5">
+                No active auctions found. Be the first to create one!
+              </div>
+            )}
           </div>
 
-          {/* Right Sidebar - Recent Activity */}
           <div className="lg:col-span-1">
             <h2 className="text-xl font-bold text-white mb-6">Recent Activity</h2>
             <GlassCard className="p-0 overflow-hidden">

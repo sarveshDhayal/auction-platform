@@ -1,30 +1,37 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Upload, X, DollarSign, Clock, ShieldCheck, Tag, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import GlassCard from '../components/ui/GlassCard';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { UploadCloud, X, Calendar, DollarSign, Tag, ShieldCheck } from 'lucide-react';
+import GlassCard from '../components/ui/GlassCard';
+import api from '../services/api';
 
-const CreateAuction = () => {
+const CATEGORIES = [
+  'Digital Art', 'Collectibles', 'Electronics', 'Vehicles', 'Real Estate', 'Antiques'
+];
+
+export default function CreateAuction() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
+    category: '',
     startingPrice: '',
     minIncrement: '',
-    startTime: '',
     endTime: '',
-    category: 'electronics',
-    paymentSecurity: true,
+    description: '',
+    requiresPaymentVerification: true,
+    image: null
   });
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setFormData({ ...formData, image: file });
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
@@ -33,215 +40,244 @@ const CreateAuction = () => {
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+  const removeImage = () => {
+    setImagePreview(null);
+    setFormData({ ...formData, image: null });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+    setError(null);
+
+    try {
+      const data = new FormData();
+      data.append('title', formData.title);
+      data.append('category', formData.category);
+      data.append('startingPrice', formData.startingPrice);
+      data.append('minIncrement', formData.minIncrement);
+      data.append('endTime', formData.endTime);
+      data.append('description', formData.description);
+      data.append('requiresPaymentVerification', formData.requiresPaymentVerification);
+      
+      if (formData.image) {
+        data.append('image', formData.image);
+      }
+
+      const response = await api.post('/auctions', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Redirect to the newly created auction room
+      const newAuctionId = response.data.data.id;
+      navigate(`/auction/${newAuctionId}`);
+
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to create auction');
       setLoading(false);
-      // Navigate to the newly created auction room
-      navigate('/auction/new-123');
-    }, 1500);
+    }
   };
 
   return (
-    <div className="flex gap-8">
-      <Sidebar />
-      
-      <div className="flex-1 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Create New Auction</h1>
-          <p className="text-text-secondary">Fill in the details to list your product for live bidding.</p>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-4xl mx-auto"
+    >
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-neon-primary to-neon-secondary">
+          Create New Auction
+        </h1>
+        <p className="text-text-muted mt-2">List your asset for real-time bidding</p>
+      </div>
+
+      {error && (
+        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+          {error}
         </div>
+      )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Same UI structure, just updated form logic */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Image Upload Section */}
-          <GlassCard className="p-8">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <UploadCloud className="w-5 h-5 text-primary" /> Product Images
-            </h3>
-            
-            <div className="border-2 border-dashed border-white/20 rounded-2xl p-8 text-center hover:border-primary/50 transition-colors bg-white/5 relative group">
-              {imagePreview ? (
-                <div className="relative inline-block">
-                  <img src={imagePreview} alt="Preview" className="max-h-64 rounded-lg object-cover" />
-                  <button 
-                    type="button" 
-                    onClick={() => setImagePreview(null)}
-                    className="absolute -top-3 -right-3 bg-danger text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div className="flex flex-col items-center pointer-events-none">
-                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4 text-primary group-hover:scale-110 transition-transform">
-                      <UploadCloud className="w-8 h-8" />
-                    </div>
-                    <p className="text-white font-medium mb-1">Click to upload or drag and drop</p>
-                    <p className="text-sm text-text-secondary">SVG, PNG, JPG or GIF (MAX. 5MB)</p>
-                  </div>
-                </>
-              )}
-            </div>
-          </GlassCard>
-
-          {/* Basic Details */}
-          <GlassCard className="p-8">
-            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-              <Tag className="w-5 h-5 text-primary" /> Basic Details
-            </h3>
-            
-            <div className="space-y-6">
-              <Input 
-                label="Auction Title" 
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="e.g. Vintage Rolex Submariner 1980" 
-                required
-              />
+          <div className="lg:col-span-2 space-y-6">
+            <GlassCard className="p-6">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Tag className="w-5 h-5 text-neon-primary" />
+                Asset Details
+              </h2>
               
-              <div className="flex flex-col gap-1.5 w-full">
-                <label className="text-sm font-medium text-text-secondary">Product Description</label>
-                <textarea 
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  className="glass-input w-full min-h-[120px] resize-y"
-                  placeholder="Describe the item in detail, including condition, specifications, and history..."
+              <div className="space-y-4">
+                <Input
+                  label="Listing Title"
+                  placeholder="e.g., Rare Vintage Rolex Daytona"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
                   required
-                ></textarea>
-              </div>
+                />
+                
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-text-secondary">Category</label>
+                  <select 
+                    className="w-full glass-input rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-neon-primary/50"
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    required
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {CATEGORIES.map(cat => (
+                      <option key={cat} value={cat} className="bg-surface-elevated text-text-primary">
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="flex flex-col gap-1.5 w-full">
-                <label className="text-sm font-medium text-text-secondary">Category</label>
-                <select 
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="glass-input w-full appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23CBD5E1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] bg-[length:0.65em_auto]"
-                >
-                  <option value="electronics" className="bg-background">Electronics & Tech</option>
-                  <option value="art" className="bg-background">Art & Collectibles</option>
-                  <option value="vehicles" className="bg-background">Vehicles</option>
-                  <option value="fashion" className="bg-background">Fashion & Accessories</option>
-                  <option value="realestate" className="bg-background">Real Estate</option>
-                </select>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-text-secondary">Description</label>
+                  <textarea 
+                    className="w-full glass-input rounded-lg px-4 py-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-neon-primary/50 min-h-[120px]"
+                    placeholder="Provide detailed information about your asset..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    required
+                  />
+                </div>
               </div>
-            </div>
-          </GlassCard>
+            </GlassCard>
 
-          {/* Pricing & Timing */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <GlassCard className="p-8">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-success" /> Pricing
-              </h3>
+            <GlassCard className="p-6">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-neon-secondary" />
+                Auction Parameters
+              </h2>
               
-              <div className="space-y-6">
-                <Input 
-                  label="Starting Price ($)" 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Starting Price ($)"
                   type="number"
-                  name="startingPrice"
-                  value={formData.startingPrice}
-                  onChange={handleChange}
-                  placeholder="0.00" 
                   min="0"
                   step="0.01"
+                  placeholder="0.00"
+                  value={formData.startingPrice}
+                  onChange={(e) => setFormData({...formData, startingPrice: e.target.value})}
                   required
                 />
-                <Input 
-                  label="Minimum Bid Increment ($)" 
+                
+                <Input
+                  label="Minimum Bid Increment ($)"
                   type="number"
-                  name="minIncrement"
-                  value={formData.minIncrement}
-                  onChange={handleChange}
-                  placeholder="5.00" 
                   min="1"
-                  step="1"
+                  step="0.01"
+                  placeholder="10.00"
+                  value={formData.minIncrement}
+                  onChange={(e) => setFormData({...formData, minIncrement: e.target.value})}
                   required
                 />
+                
+                <div className="md:col-span-2">
+                  <Input
+                    label="End Date & Time"
+                    type="datetime-local"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                    required
+                  />
+                </div>
               </div>
             </GlassCard>
+          </div>
 
-            <GlassCard className="p-8">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-warning" /> Timing
-              </h3>
+          <div className="space-y-6">
+            <GlassCard className="p-6">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Upload className="w-5 h-5 text-neon-primary" />
+                Media
+              </h2>
               
-              <div className="space-y-6">
-                <Input 
-                  label="Start Time" 
-                  type="datetime-local"
-                  name="startTime"
-                  value={formData.startTime}
-                  onChange={handleChange}
-                  className="[&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
-                  required
-                />
-                <Input 
-                  label="End Time" 
-                  type="datetime-local"
-                  name="endTime"
-                  value={formData.endTime}
-                  onChange={handleChange}
-                  className="[&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
-                  required
-                />
+              <div className="space-y-4">
+                {!imagePreview ? (
+                  <div className="relative group cursor-pointer">
+                    <input 
+                      type="file" 
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      required
+                    />
+                    <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center flex flex-col items-center justify-center gap-3 group-hover:border-neon-primary/50 group-hover:bg-neon-primary/5 transition-all">
+                      <div className="w-12 h-12 rounded-full bg-surface-elevated flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Upload className="w-6 h-6 text-text-secondary group-hover:text-neon-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-text-primary">Click to upload image</p>
+                        <p className="text-xs text-text-muted mt-1">PNG, JPG, WEBP up to 5MB</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative rounded-xl overflow-hidden aspect-video border border-white/10 group">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                      <Button variant="danger" size="sm" onClick={removeImage} className="gap-2">
+                        <X className="w-4 h-4" /> Remove
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </GlassCard>
+
+            <GlassCard className="p-6">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                Security
+              </h2>
+              
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div className="relative flex items-center justify-center mt-1">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only"
+                    checked={formData.requiresPaymentVerification}
+                    onChange={(e) => setFormData({...formData, requiresPaymentVerification: e.target.checked})}
+                  />
+                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                    formData.requiresPaymentVerification 
+                      ? 'bg-neon-primary border-neon-primary' 
+                      : 'border-white/20 group-hover:border-white/40'
+                  }`}>
+                    {formData.requiresPaymentVerification && <ShieldCheck className="w-3.5 h-3.5 text-white" />}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-text-primary">Require Payment Verification</p>
+                  <p className="text-xs text-text-muted mt-1">
+                    Bidders must pre-authorize their card via Stripe to place bids.
+                  </p>
+                </div>
+              </label>
+            </GlassCard>
+
+            <Button 
+              type="submit" 
+              className="w-full h-14 text-lg font-semibold gap-2 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]"
+              disabled={loading}
+            >
+              {loading ? 'Publishing...' : (
+                <>
+                  Launch Auction <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </Button>
           </div>
 
-          {/* Security Settings */}
-          <GlassCard className="p-8">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-primary" /> Security Settings
-            </h3>
-            
-            <label className="flex items-start gap-4 cursor-pointer p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-              <div className="mt-1">
-                <input 
-                  type="checkbox" 
-                  name="paymentSecurity"
-                  checked={formData.paymentSecurity}
-                  onChange={handleChange}
-                  className="w-5 h-5 rounded border-white/20 text-primary focus:ring-primary/50 bg-background" 
-                />
-              </div>
-              <div>
-                <p className="text-white font-medium mb-1">Require Payment Verification</p>
-                <p className="text-sm text-text-secondary">Bidders must authorize a temporary hold on their card before placing bids. This prevents unpaid wins and ensures a secure auction.</p>
-              </div>
-            </label>
-          </GlassCard>
-
-          <div className="flex justify-end gap-4">
-            <Button type="button" variant="ghost">Cancel</Button>
-            <Button type="submit" size="lg" isLoading={loading}>Publish Auction</Button>
-          </div>
-
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </motion.div>
   );
-};
-
-export default CreateAuction;
+}

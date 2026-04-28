@@ -1,98 +1,122 @@
-// server/socket/bidHandler.js
-const db            = require('../config/db');
-const redis         = require('../config/redis');
-const stripeService = require('../services/stripeService');
-const emailService  = require('../services/emailService');
+import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
+import { prisma } from '../config/db.js';
 
-module.exports = (io) => {
+let io;
+
+export const initSocket = (httpServer) => {
+  io = new Server(httpServer, {
+    cors: {
+      origin: process.env.CLIENT_URL || 'http://localhost:5173',
+      credentials: true
+    }
+  });
+
+  // Authentication Middleware for Socket
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error("Authentication error: No token provided"));
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.userId = decoded.id;
+      next();
+    } catch (err) {
+      next(new Error("Authentication error: Invalid token"));
+    }
+  });
+
   io.on('connection', (socket) => {
+    // console.log(`🔌 User connected via socket: ${socket.userId}`);
 
     // Join a specific auction room
-    socket.on('join_auction', async (auctionId) => {
-      socket.join(`auction_${auctionId}`);
-
-      // Send current state to the new joiner
-      const [rows] = await db.query(
-        'SELECT current_price, end_time, status FROM auctions WHERE id = ?',
-        [auctionId]
-      );
-      socket.emit('auction_state', rows[0]);
-
-      // Send bid history
-      const [bids] = await db.query(
-        `SELECT b.amount, u.name, b.created_at
-         FROM bids b JOIN users u ON b.bidder_id = u.id
-         WHERE b.auction_id = ?
-         ORDER BY b.amount DESC LIMIT 10`,
-        [auctionId]
-      );
-      socket.emit('bid_history', bids);
+    socket.on('join_auction', async ({ auctionId }) => {
+      socket.join(auctionId);
+      // console.log(`User ${socket.userId} joined room ${auctionId}`);
+      
+      // Update Watchers count
+      const roomSize = io.sockets.adapter.rooms.get(auctionId)?.size || 0;
+      io.to(auctionId).emit('watchers_update', roomSize);
     });
 
-    // Handle a new bid
-    socket.on('place_bid', async ({ auctionId, userId, amount, paymentMethodId }) => {
+    // Leave a specific auction room
+    socket.on('leave_auction', ({ auctionId }) => {
+      socket.leave(auctionId);
+      const roomSize = io.sockets.adapter.rooms.get(auctionId)?.size || 0;
+      io.to(auctionId).emit('watchers_update', roomSize);
+    });
+
+    // Handle new bid
+    socket.on('place_bid', async (data, callback) => {
+      const { auctionId, amount } = data;
+      
       try {
-        // 1. Validate auction is still active
-        const [auction] = await db.query(
-          'SELECT * FROM auctions WHERE id = ? AND status = "active" AND end_time > NOW()',
-          [auctionId]
-        );
-        if (!auction.length) return socket.emit('bid_error', 'Auction has ended');
-
-        // 2. Validate bid amount
-        if (amount <= auction[0].current_price) {
-          return socket.emit('bid_error', `Bid must exceed $${auction[0].current_price}`);
+        // 1. Fetch Auction Data
+        const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
+        if (!auction) return callback({ status: 'error', message: 'Auction not found' });
+        
+        if (auction.status !== 'active') {
+          return callback({ status: 'error', message: 'Auction is not active' });
         }
 
-        // 3. Create Stripe payment hold (authorize only, don't capture)
-        const paymentIntent = await stripeService.createHold(
-          userId, amount, paymentMethodId
-        );
+        const currentMax = parseFloat(auction.currentHighestBid) || parseFloat(auction.startingPrice);
+        const minValid = currentMax + parseFloat(auction.minIncrement);
+        const bidAmount = parseFloat(amount);
 
-        // 4. Release the previous highest bidder's hold
-        const [prevBid] = await db.query(
-          `SELECT b.stripe_pi_id, b.bidder_id, u.email, u.name
-           FROM bids b JOIN users u ON b.bidder_id = u.id
-           WHERE b.auction_id = ? AND b.hold_status = 'held'
-           ORDER BY b.amount DESC LIMIT 1`,
-          [auctionId]
-        );
-        if (prevBid.length) {
-          await stripeService.releaseHold(prevBid[0].stripe_pi_id);
-          await db.query(
-            "UPDATE bids SET hold_status = 'released' WHERE stripe_pi_id = ?",
-            [prevBid[0].stripe_pi_id]
-          );
-          // Notify outbid user via email
-          await emailService.sendOutbidEmail(prevBid[0].email, prevBid[0].name, auction[0].title);
+        if (bidAmount < minValid) {
+          return callback({ status: 'error', message: `Minimum bid is $${minValid}` });
         }
 
-        // 5. Save new bid to DB
-        await db.query(
-          'INSERT INTO bids (auction_id, bidder_id, amount, stripe_pi_id, hold_status) VALUES (?,?,?,?,?)',
-          [auctionId, userId, amount, paymentIntent.id, 'held']
-        );
+        // 2. Perform DB Updates in a Transaction
+        const [newBid, updatedAuction] = await prisma.$transaction([
+          prisma.bid.create({
+            data: {
+              auctionId,
+              bidderId: socket.userId,
+              amount: bidAmount
+            },
+            include: { bidder: true } // Need bidder info to broadcast to frontend
+          }),
+          prisma.auction.update({
+            where: { id: auctionId },
+            data: { currentHighestBid: bidAmount }
+          })
+        ]);
 
-        // 6. Update auction current price
-        await db.query(
-          'UPDATE auctions SET current_price = ? WHERE id = ?',
-          [amount, auctionId]
-        );
+        // 3. Broadcast to everyone in the room
+        const broadcastData = {
+          id: newBid.id,
+          amount: newBid.amount,
+          time: newBid.createdAt,
+          user: {
+            id: newBid.bidder.id,
+            name: newBid.bidder.fullName,
+            avatar: newBid.bidder.avatarUrl
+          }
+        };
 
-        // 7. Broadcast new bid to everyone in the room
-        io.to(`auction_${auctionId}`).emit('new_bid', {
-          amount,
-          bidderName: socket.user.name,
-          timestamp: new Date()
-        });
+        io.to(auctionId).emit('new_bid', broadcastData);
+        
+        // 4. Send success callback back to the sender
+        callback({ status: 'success', data: broadcastData });
 
-      } catch (err) {
-        socket.emit('bid_error', 'Payment authorization failed');
+      } catch (error) {
+        console.error('Bid Error:', error);
+        callback({ status: 'error', message: 'Internal server error while placing bid' });
       }
     });
 
     socket.on('disconnect', () => {
-      console.log('User disconnected:', socket.id);
+      // Automatic leave cleanup is handled by socket.io internally
+      // console.log(`🔌 User disconnected: ${socket.userId}`);
     });
   });
+
+  return io;
+};
+
+// Expose io instance for use in other files (like timerService)
+export const getIo = () => {
+  if (!io) console.warn('getIo() called before initSocket');
+  return io;
 };
