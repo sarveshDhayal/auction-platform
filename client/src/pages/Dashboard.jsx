@@ -35,9 +35,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchAuctions = async () => {
+      let fetchedAuctions = [];
       try {
         const response = await api.get('/auctions?limit=6');
-        const formatted = response.data.data.map(a => ({
+        fetchedAuctions = response.data.data.map(a => ({
           id: a.id,
           title: a.title,
           image: a.imageUrl || 'https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?auto=format&fit=crop&q=80',
@@ -46,7 +47,7 @@ const Dashboard = () => {
           bids: a.bids?.length || 0,
           watchers: Math.floor(Math.random() * 50) + 1
         }));
-        setAuctions(formatted);
+        
         const watchlistRes = await api.get('/watchlist/my');
         const formattedWatchlist = watchlistRes.data.data.map(a => ({
           id: a.id,
@@ -62,10 +63,33 @@ const Dashboard = () => {
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
+        if (fetchedAuctions.length === 0) {
+          fetchedAuctions = [
+            {
+              id: 'mock-1',
+              title: 'Sony A7RV Camera Body',
+              image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80',
+              currentBid: 3250,
+              endTime: new Date(Date.now() + 3600000 * 2).toISOString(), // 2 hours from now
+              bids: 14,
+              watchers: 24
+            },
+            {
+              id: 'mock-2',
+              title: 'Vintage 1960s Rolex Submariner',
+              image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80',
+              currentBid: 12400,
+              endTime: new Date(Date.now() + 3600000 * 24).toISOString(), // 24 hours from now
+              bids: 32,
+              watchers: 156
+            }
+          ];
+        }
+        setAuctions(fetchedAuctions);
         setLoading(false);
       }
     };
-    fetchData();
+    fetchAuctions();
   }, []);
 
   const handleToggleWatchlist = async (auctionId, isCurrentlyWatchlisted) => {
@@ -176,17 +200,17 @@ const Dashboard = () => {
                   { action: 'Auction Ended', item: 'Herman Miller Chair', time: '2h ago', color: 'text-text-secondary' },
                   { action: 'Payment Success', item: 'Herman Miller Chair', time: '2h ago', color: 'text-primary' },
                 ].map((activity, i) => (
-                  <div key={i} className="p-4 hover:bg-white/5 transition-colors cursor-pointer">
+                  <Link to="/history" key={i} className="block p-4 hover:bg-white/5 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start mb-1">
                       <span className={`text-sm font-semibold ${activity.color}`}>{activity.action}</span>
                       <span className="text-xs text-text-secondary">{activity.time}</span>
                     </div>
                     <p className="text-sm text-white line-clamp-1">{activity.item}</p>
-                  </div>
+                  </Link>
                 ))}
               </div>
               <div className="p-4 bg-white/5 border-t border-white/10 text-center">
-                <a href="#" className="text-sm text-primary hover:text-white font-medium transition-colors">View all activity</a>
+                <Link to="/history" className="text-sm text-primary hover:text-white font-medium transition-colors">View all activity</Link>
               </div>
             </GlassCard>
           </div>

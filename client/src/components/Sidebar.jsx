@@ -12,10 +12,10 @@ const Sidebar = ({ isAdmin = false }) => {
 
   const userLinks = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { name: 'My Auctions', icon: Gavel, path: '#my-auctions' },
-    { name: 'Bidding History', icon: History, path: '#history' },
-    { name: 'Payments', icon: CreditCard, path: '#payments' },
-    { name: 'Settings', icon: Settings, path: '#settings' },
+    { name: 'My Auctions', icon: Gavel, path: '/my-auctions' },
+    { name: 'Bidding History', icon: History, path: '/history' },
+    { name: 'Payments', icon: CreditCard, path: '/payments' },
+    { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 
   const adminLinks = [

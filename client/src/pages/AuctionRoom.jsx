@@ -39,6 +39,40 @@ export default function AuctionRoom() {
   // 1. Fetch initial auction data
   useEffect(() => {
     const fetchAuction = async () => {
+      // Mock data handling for demo purposes
+      if (id?.startsWith('mock-')) {
+        const mockData = id === 'mock-1' ? {
+          id: 'mock-1',
+          title: 'Sony A7RV Camera Body',
+          description: 'The Sony A7R V is the fifth generation of the company’s high-resolution full-frame mirrorless series. It features a 61MP sensor and a dedicated AI processing unit for improved autofocus performance.',
+          imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80',
+          startingPrice: 3000,
+          currentHighestBid: 3250,
+          minIncrement: 50,
+          endTime: new Date(Date.now() + 3600000 * 2).toISOString(),
+          status: 'active',
+          seller: { fullName: 'CameraStorePro', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CameraStore' },
+          bids: []
+        } : {
+          id: 'mock-2',
+          title: 'Vintage 1960s Rolex Submariner',
+          description: 'A classic 1960s Rolex Submariner in excellent condition. This iconic timepiece features a beautiful patina on the dial and original Oyster bracelet.',
+          imageUrl: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80',
+          startingPrice: 10000,
+          currentHighestBid: 12400,
+          minIncrement: 100,
+          endTime: new Date(Date.now() + 3600000 * 24).toISOString(),
+          status: 'active',
+          seller: { fullName: 'VintageTime', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vintage' },
+          bids: []
+        };
+        
+        setAuction(mockData);
+        setBids([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await api.get(`/auctions/${id}`);
         const data = response.data.data;

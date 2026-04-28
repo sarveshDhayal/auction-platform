@@ -9,6 +9,10 @@ import CreateAuction from './pages/CreateAuction';
 import AuctionRoom from './pages/AuctionRoom';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import MyAuctions from './pages/MyAuctions';
+import BiddingHistory from './pages/BiddingHistory';
+import Payments from './pages/Payments';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -35,6 +39,26 @@ function App() {
           <Route path="/admin" element={
             <ProtectedRoute adminOnly={true}>
               <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-auctions" element={
+            <ProtectedRoute>
+              <MyAuctions />
+            </ProtectedRoute>
+          } />
+          <Route path="/history" element={
+            <ProtectedRoute>
+              <BiddingHistory />
+            </ProtectedRoute>
+          } />
+          <Route path="/payments" element={
+            <ProtectedRoute>
+              <Payments />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           } />
         </Routes>
