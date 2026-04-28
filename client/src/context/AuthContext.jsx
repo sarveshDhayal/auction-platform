@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -10,56 +11,71 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check for saved user session (mocked for now)
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  // Validate session on load
+  const loadUser = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data.data.user);
+    } catch (error) {
+      console.error('Session validation failed:', error);
+      // Invalid token, clear it
+      localStorage.removeItem('token');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    loadUser();
+
+    // Listen for unauthorized events from api interceptor
+    const handleUnauthorized = () => logout();
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [loadUser]);
+
   const login = async (email, password) => {
-    // Mock login logic
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const mockUser = {
-          id: '1',
-          name: 'Demo User',
-          email,
-          role: email === 'admin@bidmaster.com' ? 'admin' : 'user',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        localStorage.setItem('token', 'mock-jwt-token');
-        resolve(mockUser);
-      }, 1000);
-    });
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      const { user: userData, token } = response.data.data;
+      
+      localStorage.setItem('token', token);
+      setUser(userData);
+      
+      return userData;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Login failed';
+      throw new Error(message);
+    }
   };
 
-  const register = async (name, email, password) => {
-    // Mock register logic
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const mockUser = {
-          id: '2',
-          name,
-          email,
-          role: 'user',
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        localStorage.setItem('token', 'mock-jwt-token');
-        resolve(mockUser);
-      }, 1000);
-    });
+  const register = async (fullName, email, password) => {
+    try {
+      const response = await api.post('/auth/register', { fullName, email, password });
+      const { user: userData, token } = response.data.data;
+      
+      localStorage.setItem('token', token);
+      setUser(userData);
+      
+      return userData;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Registration failed';
+      throw new Error(message);
+    }
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
     localStorage.removeItem('token');
     navigate('/auth');
   };
