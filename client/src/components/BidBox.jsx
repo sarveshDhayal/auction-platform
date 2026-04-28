@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { DollarSign, ArrowUp, AlertCircle } from 'lucide-react';
 import Button from './ui/Button';
 
-const BidBox = ({ currentBid, minIncrement, onPlaceBid, isEnded }) => {
+const BidBox = ({ currentBid, minIncrement, onPlaceBid, isEnded, disabled }) => {
   const [bidAmount, setBidAmount] = useState('');
   const [error, setError] = useState('');
   const [isBidding, setIsBidding] = useState(false);
@@ -27,12 +27,20 @@ const BidBox = ({ currentBid, minIncrement, onPlaceBid, isEnded }) => {
     }
 
     setIsBidding(true);
-    // Simulate network delay
-    setTimeout(() => {
-      onPlaceBid(amount);
-      setBidAmount('');
-      setIsBidding(false);
-    }, 600);
+    
+    // Use an async approach to handle the bid
+    const submitBid = async () => {
+      try {
+        await onPlaceBid(amount);
+        setBidAmount('');
+      } catch (err) {
+        setError(err.message || 'Failed to place bid');
+      } finally {
+        setIsBidding(false);
+      }
+    };
+
+    submitBid();
   };
 
   return (
@@ -68,7 +76,7 @@ const BidBox = ({ currentBid, minIncrement, onPlaceBid, isEnded }) => {
               if (error) setError('');
             }}
             placeholder={`Enter $${minValidBid.toLocaleString()} or more`}
-            disabled={isEnded || isBidding}
+            disabled={isEnded || isBidding || disabled}
             className={`w-full bg-background border ${error ? 'border-danger focus:ring-danger/50' : 'border-white/20 focus:ring-primary/50'} rounded-xl py-4 pl-12 pr-4 text-xl font-bold font-mono text-white placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 transition-all disabled:opacity-50`}
             step="0.01"
           />
@@ -90,7 +98,7 @@ const BidBox = ({ currentBid, minIncrement, onPlaceBid, isEnded }) => {
               key={quickBid}
               type="button"
               onClick={() => setBidAmount(quickBid.toString())}
-              disabled={isEnded || isBidding}
+              disabled={isEnded || isBidding || disabled}
               className="py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
             >
               +${quickBid.toLocaleString()}
@@ -101,7 +109,7 @@ const BidBox = ({ currentBid, minIncrement, onPlaceBid, isEnded }) => {
         <Button 
           type="submit" 
           className="w-full py-4 text-lg font-bold shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]"
-          disabled={isEnded || isBidding}
+          disabled={isEnded || isBidding || disabled}
           isLoading={isBidding}
         >
           {isEnded ? 'Auction Ended' : (

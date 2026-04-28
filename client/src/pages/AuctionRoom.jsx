@@ -289,7 +289,7 @@ export default function AuctionRoom() {
                 <BidBox 
                   currentBid={parseFloat(auction.currentHighestBid || auction.startingPrice)}
                   minIncrement={parseFloat(auction.minIncrement)}
-                  onSubmit={handlePlaceBid}
+                  onPlaceBid={handlePlaceBid}
                   disabled={!connected}
                 />
               ) : (
