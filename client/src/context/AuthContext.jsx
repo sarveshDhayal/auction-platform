@@ -2,9 +2,22 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
-const AuthContext = createContext();
+const AuthContext = createContext({
+  user: null,
+  loading: true,
+  login: () => Promise.resolve(),
+  googleLogin: () => Promise.resolve(),
+  register: () => Promise.resolve(),
+  logout: () => {}
+});
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -64,7 +77,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/google', { credential });
       // The backend returns { status, token, data: { ...user } }
       const token = response.data.token;
-      const userData = response.data.data;
+      const userData = response.data.data.user;
       
       localStorage.setItem('token', token);
       setUser(userData);
@@ -108,7 +121,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

@@ -1,171 +1,150 @@
 import { prisma } from '../config/db.js';
 import { registerAuctionTimer } from '../services/timerService.js';
+import BaseController from './baseController.js';
 
 /**
- * @desc    Create new auction
- * @route   POST /api/auctions
- * @access  Private
+ * AuctionController Class - Handles the lifecycle of auctions.
+ * This class uses "Inheritance" from BaseController to keep our response logic dry.
  */
-export const createAuction = async (req, res) => {
-  try {
-    const { 
-      title, description, category, startingPrice, minIncrement, 
-      startTime, endTime, requiresPaymentVerification 
-    } = req.body;
+class AuctionController extends BaseController {
+  
+  /**
+   * @desc    Create new auction
+   */
+  createAuction = async (req, res) => {
+    try {
+      const { 
+        title, description, category, startingPrice, minIncrement, 
+        startTime, endTime, requiresPaymentVerification 
+      } = req.body;
 
-    // The image file is uploaded via Multer/Cloudinary
-    const imageUrl = req.file ? req.file.path : null;
+      const imageUrl = req.file ? req.file.path : null;
 
-    if (!title || !description || !startingPrice || !endTime) {
-      return res.status(400).json({ status: 'error', message: 'Missing required fields' });
-    }
-
-    const start = new Date(startTime || Date.now());
-    const end = new Date(endTime);
-
-    if (end <= start) {
-      return res.status(400).json({ status: 'error', message: 'End time must be after start time' });
-    }
-
-    const newAuction = await prisma.auction.create({
-      data: {
-        sellerId: req.user.id,
-        title,
-        description,
-        category,
-        startingPrice: parseFloat(startingPrice),
-        currentHighestBid: parseFloat(startingPrice), // Starts at starting price
-        minIncrement: parseFloat(minIncrement),
-        startTime: start,
-        endTime: end,
-        imageUrl,
-        requiresPaymentVerification: requiresPaymentVerification === 'true' || requiresPaymentVerification === true,
-        status: start <= new Date() ? 'active' : 'draft', // Auto active if start time is past
+      if (!title || !description || !startingPrice || !endTime) {
+        return this.sendError(res, 'Missing required fields', 400);
       }
-    });
 
-    // If active, register timer in Redis
-    if (newAuction.status === 'active') {
-      await registerAuctionTimer(newAuction.id, end.getTime());
+      const start = new Date(startTime || Date.now());
+      const end = new Date(endTime);
+
+      if (end <= start) {
+        return this.sendError(res, 'End time must be after start time', 400);
+      }
+
+      const newAuction = await prisma.auction.create({
+        data: {
+          sellerId: req.user.id,
+          title,
+          description,
+          category,
+          startingPrice: parseFloat(startingPrice),
+          currentHighestBid: parseFloat(startingPrice),
+          minIncrement: parseFloat(minIncrement),
+          startTime: start,
+          endTime: end,
+          imageUrl,
+          requiresPaymentVerification: requiresPaymentVerification === 'true' || requiresPaymentVerification === true,
+          status: start <= new Date() ? 'active' : 'draft',
+        }
+      });
+
+      if (newAuction.status === 'active') {
+        await registerAuctionTimer(newAuction.id, end.getTime());
+      }
+
+      return this.sendSuccess(res, newAuction, 201, 'Auction created successfully');
+
+    } catch (error) {
+      return this.sendError(res, 'Failed to create auction', 500, error);
     }
+  };
 
-    res.status(201).json({
-      status: 'success',
-      data: newAuction
-    });
+  /**
+   * @desc    Get all active auctions (with search, filter, pagination)
+   */
+  getAuctions = async (req, res) => {
+    try {
+      const { search, category, page = 1, limit = 10, status = 'active' } = req.query;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
 
-  } catch (error) {
-    console.error('Create Auction Error:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to create auction' });
-  }
-};
+      const whereClause = { status };
+      if (category) whereClause.category = category;
+      if (search) {
+        whereClause.title = { contains: search, mode: 'insensitive' };
+      }
 
-/**
- * @desc    Get all active auctions (with search, filter, pagination)
- * @route   GET /api/auctions
- * @access  Public
- */
-export const getAuctions = async (req, res) => {
-  try {
-    const { search, category, page = 1, limit = 10, status = 'active' } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    // Build the query
-    const whereClause = {
-      status: status, // Only fetch active by default
-    };
-
-    if (category) whereClause.category = category;
-    
-    if (search) {
-      whereClause.title = {
-        contains: search,
-        mode: 'insensitive' // Postgres case-insensitive
-      };
-    }
-
-    const [auctions, total] = await Promise.all([
-      prisma.auction.findMany({
-        where: whereClause,
-        include: {
-          seller: { select: { fullName: true, avatarUrl: true } }
-        },
-        orderBy: { endTime: 'asc' }, // Ending soonest first
-        skip,
-        take: parseInt(limit)
-      }),
-      prisma.auction.count({ where: whereClause })
-    ]);
-
-    res.status(200).json({
-      status: 'success',
-      results: auctions.length,
-      total,
-      totalPages: Math.ceil(total / limit),
-      currentPage: parseInt(page),
-      data: auctions
-    });
-
-  } catch (error) {
-    console.error('Get Auctions Error:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch auctions' });
-  }
-};
-
-/**
- * @desc    Get single auction by ID (Includes Bid History)
- * @route   GET /api/auctions/:id
- * @access  Public (Protected conditionally on frontend)
- */
-export const getAuctionById = async (req, res) => {
-  try {
-    const auction = await prisma.auction.findUnique({
-      where: { id: req.params.id },
-      include: {
-        seller: { select: { id: true, fullName: true, avatarUrl: true } },
-        winner: { select: { id: true, fullName: true, avatarUrl: true } },
-        bids: {
-          orderBy: { amount: 'desc' },
+      const [auctions, total] = await Promise.all([
+        prisma.auction.findMany({
+          where: whereClause,
           include: {
-            bidder: { select: { id: true, fullName: true, avatarUrl: true } }
+            seller: { select: { fullName: true, avatarUrl: true } }
+          },
+          orderBy: { endTime: 'asc' },
+          skip,
+          take: parseInt(limit)
+        }),
+        prisma.auction.count({ where: whereClause })
+      ]);
+
+      return res.status(200).json({
+        status: 'success',
+        results: auctions.length,
+        total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: parseInt(page),
+        data: auctions
+      });
+
+    } catch (error) {
+      return this.sendError(res, 'Failed to fetch auctions', 500, error);
+    }
+  };
+
+  /**
+   * @desc    Get single auction by ID
+   */
+  getAuctionById = async (req, res) => {
+    try {
+      const auction = await prisma.auction.findUnique({
+        where: { id: req.params.id },
+        include: {
+          seller: { select: { id: true, fullName: true, avatarUrl: true } },
+          winner: { select: { id: true, fullName: true, avatarUrl: true } },
+          bids: {
+            orderBy: { amount: 'desc' },
+            include: {
+              bidder: { select: { id: true, fullName: true, avatarUrl: true } }
+            }
           }
         }
+      });
+
+      if (!auction) {
+        return this.sendError(res, 'Auction not found', 404);
       }
-    });
 
-    if (!auction) {
-      return res.status(404).json({ status: 'error', message: 'Auction not found' });
+      return this.sendSuccess(res, auction);
+    } catch (error) {
+      return this.sendError(res, 'Failed to fetch auction details', 500, error);
     }
+  };
 
-    res.status(200).json({
-      status: 'success',
-      data: auction
-    });
-  } catch (error) {
-    console.error('Get Auction By ID Error:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch auction details' });
-  }
-};
+  /**
+   * @desc    Get user's own auctions
+   */
+  getUserAuctions = async (req, res) => {
+    try {
+      const auctions = await prisma.auction.findMany({
+        where: { sellerId: req.user.id },
+        orderBy: { createdAt: 'desc' }
+      });
 
-/**
- * @desc    Get user's own auctions (Dashboard)
- * @route   GET /api/auctions/user/my-auctions
- * @access  Private
- */
-export const getUserAuctions = async (req, res) => {
-  try {
-    const auctions = await prisma.auction.findMany({
-      where: { sellerId: req.user.id },
-      orderBy: { createdAt: 'desc' }
-    });
+      return this.sendSuccess(res, auctions);
+    } catch (error) {
+      return this.sendError(res, 'Failed to fetch your auctions', 500, error);
+    }
+  };
+}
 
-    res.status(200).json({
-      status: 'success',
-      results: auctions.length,
-      data: auctions
-    });
-  } catch (error) {
-    console.error('Get User Auctions Error:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch your auctions' });
-  }
-};
+// Singleton instance for routing
+export default new AuctionController();

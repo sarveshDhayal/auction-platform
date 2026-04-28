@@ -5,7 +5,8 @@ import { Bell, Search, Menu, X, LogOut, User, LayoutDashboard, Gavel } from 'luc
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const auth = useAuth() || {};
+  const { user, logout } = auth;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const navigate = useNavigate();

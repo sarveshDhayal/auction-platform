@@ -13,9 +13,7 @@ const MyAuctions = () => {
   useEffect(() => {
     const fetchMyAuctions = async () => {
       try {
-        // In a real scenario, this would be an endpoint like /auctions/my
-        // Using /auctions temporarily as a placeholder
-        const response = await api.get('/auctions');
+        const response = await api.get('/auctions/user/my-auctions');
         const formatted = response.data.data.map(a => ({
           id: a.id,
           title: a.title,
