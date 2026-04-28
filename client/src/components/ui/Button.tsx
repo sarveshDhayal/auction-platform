@@ -1,17 +1,24 @@
-import { motion } from 'framer-motion';
-import { clsx } from 'clsx';
+import React from 'react';
+import { motion, HTMLMotionProps } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-function cn(...inputs) {
+function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const Button = ({
+interface ButtonProps extends HTMLMotionProps<'button'> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
+  size?: 'sm' | 'md' | 'lg';
+  isLoading?: boolean;
+}
+
+const Button: React.FC<ButtonProps> = ({
   children,
   variant = 'primary',
   size = 'md',
   className,
-  isLoading,
+  isLoading = false,
   ...props
 }) => {
   const baseStyles = "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:pointer-events-none rounded-xl";
@@ -35,8 +42,8 @@ const Button = ({
     <motion.button
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className={cn(baseStyles, variants[variant], sizes[size], className)}
-      disabled={isLoading}
+      className={cn(baseStyles, variants[variant], sizes[size], className as string)}
+      disabled={isLoading || (props.disabled as boolean)}
       {...props}
     >
       {isLoading ? (
@@ -45,7 +52,7 @@ const Button = ({
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
       ) : null}
-      {children}
+      <span className="inline-flex items-center">{children as React.ReactNode}</span>
     </motion.button>
   );
 };

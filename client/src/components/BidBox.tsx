@@ -1,16 +1,24 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { DollarSign, ArrowUp, AlertCircle } from 'lucide-react';
 import Button from './ui/Button';
 
-const BidBox = ({ currentBid, minIncrement, onPlaceBid, isEnded, disabled }) => {
-  const [bidAmount, setBidAmount] = useState('');
-  const [error, setError] = useState('');
-  const [isBidding, setIsBidding] = useState(false);
+interface BidBoxProps {
+  currentBid: number;
+  minIncrement: number;
+  onPlaceBid: (amount: number) => Promise<void>;
+  isEnded?: boolean;
+  disabled?: boolean;
+}
+
+const BidBox: React.FC<BidBoxProps> = ({ currentBid, minIncrement, onPlaceBid, isEnded = false, disabled = false }) => {
+  const [bidAmount, setBidAmount] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [isBidding, setIsBidding] = useState<boolean>(false);
 
   const minValidBid = currentBid + minIncrement;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -33,7 +41,7 @@ const BidBox = ({ currentBid, minIncrement, onPlaceBid, isEnded, disabled }) => 
       try {
         await onPlaceBid(amount);
         setBidAmount('');
-      } catch (err) {
+      } catch (err: any) {
         setError(err.message || 'Failed to place bid');
       } finally {
         setIsBidding(false);

@@ -1,12 +1,19 @@
-import { forwardRef } from 'react';
-import { clsx } from 'clsx';
+import { forwardRef, InputHTMLAttributes } from 'react';
+import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { LucideIcon } from 'lucide-react';
 
-function cn(...inputs) {
+function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const Input = forwardRef(({ className, label, error, icon: Icon, ...props }, ref) => {
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+  icon?: LucideIcon;
+}
+
+const Input = forwardRef<HTMLInputElement, InputProps>(({ className, label, error, icon: Icon, ...props }, ref) => {
   return (
     <div className="flex flex-col gap-1.5 w-full">
       {label && <label className="text-sm font-medium text-text-secondary">{label}</label>}
@@ -22,7 +29,7 @@ const Input = forwardRef(({ className, label, error, icon: Icon, ...props }, ref
             "glass-input w-full",
             Icon && "pl-10",
             error && "border-danger/50 focus:border-danger focus:ring-danger/50",
-            className
+            className as string
           )}
           {...props}
         />

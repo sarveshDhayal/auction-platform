@@ -1,14 +1,23 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Users, ArrowUpRight, Heart } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
-import Badge from './ui/Badge';
+import { Auction } from '../types';
 
-const AuctionCard = ({ auction, isWatchlisted, onToggleWatchlist }) => {
+interface AuctionCardProps {
+  auction: Auction; 
+  isWatchlisted: boolean;
+  onToggleWatchlist?: (id: string, isWatchlisted: boolean) => void;
+}
+
+const AuctionCard: React.FC<AuctionCardProps> = ({ auction, isWatchlisted, onToggleWatchlist }) => {
+  const currentBid = auction.currentHighestBid || (auction as any).startingPrice || 0;
+  
   return (
     <GlassCard hoverEffect className="group p-4 flex flex-col h-full">
       <div className="relative rounded-xl overflow-hidden mb-4 aspect-video">
         <img
-          src={auction.image}
+          src={auction.image || (auction as any).imageUrl}
           alt={auction.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
@@ -21,8 +30,8 @@ const AuctionCard = ({ auction, isWatchlisted, onToggleWatchlist }) => {
           )}
           <button
             onClick={(e) => {
-              e.preventDefault(); // Prevent navigating if wrapped in a link elsewhere
-              e.stopPropagation(); // Stop triggering card click
+              e.preventDefault();
+              e.stopPropagation();
               if (onToggleWatchlist) onToggleWatchlist(auction.id, isWatchlisted);
             }}
             className={`flex items-center justify-center w-8 h-8 rounded-full backdrop-blur-md transition-all ${isWatchlisted
@@ -47,20 +56,20 @@ const AuctionCard = ({ auction, isWatchlisted, onToggleWatchlist }) => {
         <div className="grid grid-cols-2 gap-4 mb-4 p-3 rounded-xl bg-white/5 border border-white/5">
           <div>
             <p className="text-xs text-text-secondary mb-1">Current Bid</p>
-            <p className="text-lg font-bold text-success">${auction.currentBid.toLocaleString()}</p>
+            <p className="text-lg font-bold text-success">${Number(currentBid).toLocaleString()}</p>
           </div>
           <div>
             <p className="text-xs text-text-secondary mb-1 flex items-center gap-1">
               <Clock className="w-3 h-3" /> Time Left
             </p>
-            <p className="text-sm font-semibold text-warning">{auction.timeLeft}</p>
+            <p className="text-sm font-semibold text-warning">{(auction as any).timeLeft || 'Live'}</p>
           </div>
         </div>
 
         <div className="flex items-center justify-between mt-auto">
           <div className="flex items-center gap-2 text-xs text-text-secondary">
             <Users className="w-4 h-4" />
-            <span>{auction.watchers} watching</span>
+            <span>{(auction as any).watchers || 0} watching</span>
           </div>
           <Link
             to={`/auction/${auction.id}`}

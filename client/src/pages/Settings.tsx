@@ -11,8 +11,8 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('profile');
   
   // Form states
-  const [name, setName] = useState<string>(user?.name || '');
-  const [email, setEmail] = useState<string>(user?.email || '');
+  const [name, setName] = useState<string>((user as any)?.name || '');
+  const [email, setEmail] = useState<string>((user as any)?.email || '');
 
   return (
     <div className="flex gap-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pb-20">
@@ -64,7 +64,7 @@ const Settings: React.FC = () => {
                 <div className="flex items-center gap-6 mb-8">
                   <div className="relative group cursor-pointer">
                     <img 
-                      src={user?.avatar || 'https://ui-avatars.com/api/?name=' + (user?.name || 'User')} 
+                      src={(user as any)?.avatar || 'https://ui-avatars.com/api/?name=' + ((user as any)?.name || 'User')} 
                       alt="Profile" 
                       className="w-24 h-24 rounded-full border-2 border-primary/50 object-cover"
                     />
@@ -87,24 +87,24 @@ const Settings: React.FC = () => {
                     <Input 
                       label="Full Name" 
                       value={name} 
-                      onChange={(e) => setName(e.target.value)} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)} 
                       icon={User}
                     />
                     <Input 
                       label="Email Address" 
                       type="email"
                       value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} 
                       icon={Mail}
                       disabled
                     />
                   </div>
                   <div className="pt-4 border-t border-white/10 flex justify-end gap-3">
                     <Button variant="outline" type="button" onClick={() => {
-                      setName(user?.name || '');
-                      setEmail(user?.email || '');
-                    }}>Cancel</Button>
-                    <Button type="submit">Save Changes</Button>
+                      setName((user as any)?.name || '');
+                      setEmail((user as any)?.email || '');
+                    }} className="px-4 py-2" isLoading={false}>Cancel</Button>
+                    <Button type="submit" className="px-6 py-2" isLoading={false}>Save Changes</Button>
                   </div>
                 </form>
               </GlassCard>
@@ -131,7 +131,7 @@ const Settings: React.FC = () => {
                     </div>
                   ))}
                   <div className="pt-4 flex justify-end">
-                    <Button type="button">Save Preferences</Button>
+                    <Button type="button" className="px-6 py-2" isLoading={false}>Save Preferences</Button>
                   </div>
                 </div>
               </GlassCard>
@@ -160,7 +160,7 @@ const Settings: React.FC = () => {
                     icon={Key}
                   />
                   <div className="pt-4 border-t border-white/10">
-                    <Button type="submit">Update Password</Button>
+                    <Button type="submit" className="px-6 py-2" isLoading={false}>Update Password</Button>
                   </div>
                 </form>
               </GlassCard>

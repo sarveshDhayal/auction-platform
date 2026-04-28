@@ -1,14 +1,23 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import AuctionCard from '../components/AuctionCard';
 import GlassCard from '../components/ui/GlassCard';
-import { Activity, Gavel, Trophy, DollarSign, ArrowRight, ChevronRight } from 'lucide-react';
+import { Activity, Gavel, Trophy, DollarSign, ChevronRight, LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { Auction } from '../types';
 
-const StatCard = ({ title, value, icon: Icon, trend, trendUp }) => (
+interface StatCardProps {
+  title: string;
+  value: string;
+  icon: LucideIcon;
+  trend?: string;
+  trendUp?: boolean;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend, trendUp }) => (
   <GlassCard className="p-5 flex items-start justify-between">
     <div>
       <p className="text-sm font-medium text-text-secondary mb-1">{title}</p>
@@ -25,37 +34,37 @@ const StatCard = ({ title, value, icon: Icon, trend, trendUp }) => (
   </GlassCard>
 );
 
-const Dashboard = () => {
+const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [auctions, setAuctions] = useState([]);
-  const [watchlist, setWatchlist] = useState([]);
-  const [activeTab, setActiveTab] = useState('recommended'); // 'recommended' | 'watchlist'
-  const [loading, setLoading] = useState(true);
+  const [auctions, setAuctions] = useState<Auction[]>([]);
+  const [watchlist, setWatchlist] = useState<Auction[]>([]);
+  const [activeTab, setActiveTab] = useState<'recommended' | 'watchlist'>('recommended');
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchAuctions = async () => {
-      let fetchedAuctions = [];
+      let fetchedAuctions: Auction[] = [];
       try {
-        const response = await api.get('/auctions?limit=6');
-        fetchedAuctions = response.data.data.map(a => ({
+        const response = await api.get<any>('/auctions?limit=6');
+        fetchedAuctions = response.data.data.map((a: any) => ({
           id: a.id,
           title: a.title,
           image: a.imageUrl || 'https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?auto=format&fit=crop&q=80',
           currentBid: parseFloat(a.currentHighestBid || a.startingPrice),
           endTime: a.endTime,
-          bids: a.bids?.length || 0,
+          bidsCount: a.bids?.length || 0,
           watchers: Math.floor(Math.random() * 50) + 1
         }));
 
-        const watchlistRes = await api.get('/watchlist/my');
-        const formattedWatchlist = watchlistRes.data.data.map(a => ({
+        const watchlistRes = await api.get<any>('/watchlist/my');
+        const formattedWatchlist = watchlistRes.data.data.map((a: any) => ({
           id: a.id,
           title: a.title,
           image: a.imageUrl || 'https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?auto=format&fit=crop&q=80',
           currentBid: parseFloat(a.currentHighestBid || a.startingPrice),
           endTime: a.endTime,
-          bids: a.bids?.length || 0,
+          bidsCount: a.bids?.length || 0,
           watchers: Math.floor(Math.random() * 50) + 1
         }));
         setWatchlist(formattedWatchlist);
@@ -71,18 +80,18 @@ const Dashboard = () => {
               image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80',
               currentBid: 3250,
               endTime: new Date(Date.now() + 3600000 * 2).toISOString(), // 2 hours from now
-              bids: 14,
+              bidsCount: 14,
               watchers: 24
-            },
+            } as any,
             {
               id: 'mock-2',
               title: 'Vintage 1960s Rolex Submariner',
               image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80',
               currentBid: 12400,
               endTime: new Date(Date.now() + 3600000 * 24).toISOString(), // 24 hours from now
-              bids: 32,
+              bidsCount: 32,
               watchers: 156
-            }
+            } as any
           ];
         }
         setAuctions(fetchedAuctions);
@@ -92,22 +101,28 @@ const Dashboard = () => {
     fetchAuctions();
   }, []);
 
-  const handleToggleWatchlist = async (auctionId, isCurrentlyWatchlisted) => {
+  const handleToggleWatchlist = async (auctionId: string, isCurrentlyWatchlisted: boolean) => {
     try {
       if (isCurrentlyWatchlisted) {
         await api.delete(`/watchlist/remove/${auctionId}`);
         setWatchlist(prev => prev.filter(a => a.id !== auctionId));
       } else {
-        const res = await api.post('/watchlist/add', { auctionId });
-        // Instead of fetching all again, just append the auction from `auctions` array to `watchlist`
+        await api.post('/watchlist/add', { auctionId });
         const targetAuction = auctions.find(a => a.id === auctionId);
         if (targetAuction) {
           setWatchlist(prev => [targetAuction, ...prev]);
         } else {
-          // In case they click from another page, but here we know it's from Dashboard
-          // Fetching single auction could work, but for now just reload
-          const watchlistRes = await api.get('/watchlist/my');
-          // Format omitted for brevity, best to just rely on the array we have
+          const watchlistRes = await api.get<any>('/watchlist/my');
+          const formattedWatchlist = watchlistRes.data.data.map((a: any) => ({
+            id: a.id,
+            title: a.title,
+            image: a.imageUrl || 'https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?auto=format&fit=crop&q=80',
+            currentBid: parseFloat(a.currentHighestBid || a.startingPrice),
+            endTime: a.endTime,
+            bidsCount: a.bids?.length || 0,
+            watchers: Math.floor(Math.random() * 50) + 1
+          }));
+          setWatchlist(formattedWatchlist);
         }
       }
     } catch (err) {
@@ -124,7 +139,7 @@ const Dashboard = () => {
       <div className="flex-1">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-1">Welcome back, {user?.name?.split(' ')[0]}!</h1>
+            <h1 className="text-3xl font-bold text-white mb-1">Welcome back, {(user as any)?.name?.split(' ')[0] || 'User'}!</h1>
             <p className="text-text-secondary">Here's what's happening with your auctions today.</p>
           </div>
           <Link to="/create-auction" className="px-5 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-blue-600 transition-colors shadow-lg shadow-primary/30 flex items-center gap-2">

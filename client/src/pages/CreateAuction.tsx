@@ -122,7 +122,7 @@ const CreateAuction: React.FC = () => {
                   label="Listing Title"
                   placeholder="e.g., Rare Vintage Rolex Daytona"
                   value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, title: e.target.value})}
                   required
                 />
                 
@@ -131,7 +131,7 @@ const CreateAuction: React.FC = () => {
                   <select 
                     className="w-full glass-input rounded-xl px-4 py-2.5 text-white bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                     value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData({...formData, category: e.target.value})}
                     required
                   >
                     <option value="" disabled>Select a category</option>
@@ -149,7 +149,7 @@ const CreateAuction: React.FC = () => {
                     className="w-full glass-input rounded-xl px-4 py-3 text-white bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[120px]"
                     placeholder="Provide detailed information about your asset..."
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({...formData, description: e.target.value})}
                     required
                   />
                 </div>
@@ -169,7 +169,7 @@ const CreateAuction: React.FC = () => {
                   step="0.01"
                   placeholder="0.00"
                   value={formData.startingPrice}
-                  onChange={(e) => setFormData({...formData, startingPrice: e.target.value})}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, startingPrice: e.target.value})}
                   required
                 />
                 
@@ -180,7 +180,7 @@ const CreateAuction: React.FC = () => {
                   step="0.01"
                   placeholder="10.00"
                   value={formData.minIncrement}
-                  onChange={(e) => setFormData({...formData, minIncrement: e.target.value})}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, minIncrement: e.target.value})}
                   required
                 />
                 
@@ -189,7 +189,7 @@ const CreateAuction: React.FC = () => {
                     label="End Date & Time"
                     type="datetime-local"
                     value={formData.endTime}
-                    onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, endTime: e.target.value})}
                     required
                   />
                 </div>
@@ -227,7 +227,7 @@ const CreateAuction: React.FC = () => {
                   <div className="relative rounded-xl overflow-hidden aspect-video border border-white/10 group">
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-                      <Button variant="danger" size="sm" onClick={removeImage} className="gap-2">
+                      <Button variant="danger" size="sm" onClick={removeImage} className="gap-2" isLoading={false}>
                         <X className="w-4 h-4" /> Remove
                       </Button>
                     </div>

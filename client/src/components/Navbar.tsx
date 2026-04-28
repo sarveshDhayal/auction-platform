@@ -1,15 +1,13 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Bell, Search, Menu, X, LogOut, User, LayoutDashboard, Gavel } from 'lucide-react';
+import { Bell, Search, Menu, X, LogOut, LayoutDashboard, Gavel } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const Navbar = () => {
-  const auth = useAuth() || {};
-  const { user, logout } = auth;
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const navigate = useNavigate();
+const Navbar: React.FC = () => {
+  const { user, logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
 
   return (
     <nav className="fixed top-0 w-full z-40 bg-background/80 backdrop-blur-md border-b border-white/10">
@@ -53,7 +51,7 @@ const Navbar = () => {
                     className="flex items-center gap-2 focus:outline-none"
                   >
                     <img
-                      src={user.avatar}
+                      src={(user as any).avatar || `https://ui-avatars.com/api/?name=${(user as any).name}`}
                       alt="Profile"
                       className="w-8 h-8 rounded-full border border-white/20 bg-white/10"
                     />
@@ -68,13 +66,13 @@ const Navbar = () => {
                         className="absolute right-0 mt-2 w-48 rounded-xl bg-background border border-white/10 shadow-2xl py-1 overflow-hidden"
                       >
                         <div className="px-4 py-2 border-b border-white/10">
-                          <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                          <p className="text-xs text-text-secondary truncate">{user.email}</p>
+                          <p className="text-sm font-medium text-white truncate">{(user as any).name}</p>
+                          <p className="text-xs text-text-secondary truncate">{(user as any).email}</p>
                         </div>
                         <Link to="/" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:bg-white/5 hover:text-white transition-colors">
                           <LayoutDashboard className="w-4 h-4" /> Dashboard
                         </Link>
-                        {user.role === 'admin' && (
+                        {(user as any).role === 'admin' && (
                           <Link to="/admin" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-white/5 transition-colors">
                             <Menu className="w-4 h-4" /> Admin Panel
                           </Link>
@@ -116,10 +114,10 @@ const Navbar = () => {
               {user ? (
                 <>
                   <div className="flex items-center gap-3 px-3 py-3 border-b border-white/10 mb-2">
-                    <img src={user.avatar} alt="Profile" className="w-10 h-10 rounded-full border border-white/20" />
+                    <img src={(user as any).avatar || `https://ui-avatars.com/api/?name=${(user as any).name}`} alt="Profile" className="w-10 h-10 rounded-full border border-white/20" />
                     <div>
-                      <p className="text-base font-medium text-white">{user.name}</p>
-                      <p className="text-sm text-text-secondary">{user.email}</p>
+                      <p className="text-base font-medium text-white">{(user as any).name}</p>
+                      <p className="text-sm text-text-secondary">{(user as any).email}</p>
                     </div>
                   </div>
                   <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-white hover:bg-white/5">
@@ -128,7 +126,7 @@ const Navbar = () => {
                   <Link to="/create-auction" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-white hover:bg-white/5">
                     Create Auction
                   </Link>
-                  {user.role === 'admin' && (
+                  {(user as any).role === 'admin' && (
                     <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-white/5">
                       Admin Panel
                     </Link>

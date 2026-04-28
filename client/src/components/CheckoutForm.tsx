@@ -5,11 +5,10 @@ import Button from './ui/Button';
 import api from '../services/api';
 
 interface CheckoutFormProps {
-  auctionId: string;
   onSuccess: () => void;
 }
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ auctionId, onSuccess }) => {
+const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
   const stripe = useStripe();
   const elements = useElements();
 
@@ -88,7 +87,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ auctionId, onSuccess }) => 
         <CheckCircle2 className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-white mb-2">Payment Successful!</h3>
         <p className="text-text-secondary mb-6">Your transaction has been securely processed.</p>
-        <Button onClick={onSuccess} className="w-full">View Invoice</Button>
+        <Button onClick={onSuccess} className="w-full py-2" isLoading={false}>View Invoice</Button>
       </div>
     );
   }

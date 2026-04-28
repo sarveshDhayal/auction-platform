@@ -1,11 +1,18 @@
-import { clsx } from 'clsx';
+import React from 'react';
+import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-function cn(...inputs) {
+function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const Badge = ({ children, variant = 'primary', className }) => {
+interface BadgeProps {
+  children: React.ReactNode;
+  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'outline';
+  className?: string;
+}
+
+const Badge: React.FC<BadgeProps> = ({ children, variant = 'primary', className }) => {
   const variants = {
     primary: "bg-primary/20 text-primary border border-primary/30",
     secondary: "bg-secondary/20 text-secondary border border-secondary/30",
@@ -16,7 +23,7 @@ const Badge = ({ children, variant = 'primary', className }) => {
   };
 
   return (
-    <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-medium", variants[variant], className)}>
+    <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-medium", variants[variant], className as string)}>
       {children}
     </span>
   );

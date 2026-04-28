@@ -1,8 +1,14 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { History, Crown } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
+import { Bid } from '../types';
 
-const BidHistory = ({ bids }) => {
+interface BidHistoryProps {
+  bids: Bid[];
+}
+
+const BidHistory: React.FC<BidHistoryProps> = ({ bids }) => {
   return (
     <GlassCard className="p-0 overflow-hidden flex flex-col h-full max-h-[500px]">
       <div className="p-4 border-b border-white/10 bg-white/5 flex items-center justify-between">

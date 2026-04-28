@@ -5,11 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BidMaster – Real-Time Auction Platform</title>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        alert("CRASH LOG:\n" + msg + "\n" + (error && error.stack));
+      };
+      window.addEventListener("unhandledrejection", function(event) {
+        alert("PROMISE CRASH:\n" + event.reason);
+      });
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-BdOsg0gj.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D8C9jwHy.css">
+    <script type="module" crossorigin src="/assets/index-CBPbybTG.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BwoQtjZQ.css">
   </head>
   <body class="bg-slate-900 text-slate-100 font-inter antialiased overflow-x-hidden">
     <div id="root"></div>

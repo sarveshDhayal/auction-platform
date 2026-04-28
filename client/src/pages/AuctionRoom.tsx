@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Eye, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Eye, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import Button from '../components/ui/Button';
@@ -38,12 +38,12 @@ export default function AuctionRoom() {
   useEffect(() => {
     const fetchAuction = async () => {
       if (id?.startsWith('mock-')) {
-        const mockData: Auction = id === 'mock-1' ? {
+        const mockData: any = id === 'mock-1' ? {
           id: 'mock-1',
           title: 'Sony A7RV Camera Body',
           description: 'The Sony A7R V is the fifth generation of the company’s high-resolution full-frame mirrorless series.',
           image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80',
-          currentBid: 3250,
+          currentHighestBid: 3250,
           minIncrement: 50,
           endTime: new Date(Date.now() + 3600000 * 2).toISOString(),
           status: 'active',
@@ -54,7 +54,7 @@ export default function AuctionRoom() {
           title: 'Vintage 1960s Rolex Submariner',
           description: 'A classic 1960s Rolex Submariner in excellent condition.',
           image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80',
-          currentBid: 12400,
+          currentHighestBid: 12400,
           minIncrement: 100,
           endTime: new Date(Date.now() + 3600000 * 24).toISOString(),
           status: 'active',
@@ -71,12 +71,12 @@ export default function AuctionRoom() {
       try {
         const response = await api.get<any>(`/auctions/${id}`);
         const data = response.data.data;
-        const formattedAuction: Auction = {
+        const formattedAuction: any = {
           id: data.id,
           title: data.title,
           description: data.description,
           image: data.imageUrl,
-          currentBid: parseFloat(data.currentHighestBid || data.startingPrice),
+          currentHighestBid: parseFloat(data.currentHighestBid || data.startingPrice),
           minIncrement: data.minIncrement,
           endTime: data.endTime,
           status: data.status,
@@ -119,7 +119,7 @@ export default function AuctionRoom() {
 
     socket.on('new_bid', (newBid: Bid) => {
       setBids(prev => [newBid, ...prev]);
-      setAuction(prev => prev ? { ...prev, currentBid: newBid.amount } : null);
+      setAuction(prev => prev ? { ...prev, currentHighestBid: newBid.amount } : null);
     });
 
     socket.on('auction_ended', (data: { winner: User }) => {
@@ -166,9 +166,12 @@ export default function AuctionRoom() {
     <div className="pt-20 text-center px-4">
       <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
       <h2 className="text-xl font-semibold text-white mb-4">{error || 'Auction not found'}</h2>
-      <Button onClick={() => navigate('/')}>Back to Dashboard</Button>
+      <Button onClick={() => navigate('/')} className="px-6 py-2" isLoading={false}>Back to Dashboard</Button>
     </div>
   );
+
+  const auctionImage = (auction as any).image || (auction as any).imageUrl;
+  const currentHighestBid = (auction as any).currentHighestBid || 0;
 
   return (
     <div className="animate-in fade-in duration-500 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
@@ -184,9 +187,9 @@ export default function AuctionRoom() {
         
         <div className="xl:col-span-2 space-y-6">
           <GlassCard className="overflow-hidden relative aspect-video bg-black/40 flex items-center justify-center">
-            {auction.image ? (
+            {auctionImage ? (
               <img 
-                src={auction.image} 
+                src={auctionImage} 
                 alt={auction.title} 
                 className="max-w-full max-h-full object-contain"
               />
@@ -195,7 +198,7 @@ export default function AuctionRoom() {
             )}
             
             <div className="absolute top-4 left-4 flex gap-2">
-              {auction.status === 'active' ? (
+              {auction.status === 'active' || (auction.status as string) === 'live' ? (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-danger/20 border border-danger/50 backdrop-blur-md">
                   <div className="w-2 h-2 rounded-full bg-danger animate-pulse"></div>
                   <span className="text-xs font-bold text-white tracking-wide uppercase">Live Auction</span>
@@ -219,13 +222,13 @@ export default function AuctionRoom() {
             </p>
             <div className="flex items-center gap-4 pt-6 border-t border-white/10">
               <img 
-                src={auction.seller?.avatarUrl || `https://ui-avatars.com/api/?name=${auction.seller?.fullName}`}
+                src={(auction as any).seller?.avatarUrl || `https://ui-avatars.com/api/?name=${(auction as any).seller?.fullName}`}
                 alt="Seller" 
                 className="w-12 h-12 rounded-full border border-white/10" 
               />
               <div>
                 <p className="text-sm font-medium text-white">Verified Seller</p>
-                <p className="text-xs text-text-secondary">{auction.seller?.fullName}</p>
+                <p className="text-xs text-text-secondary">{(auction as any).seller?.fullName}</p>
               </div>
             </div>
           </GlassCard>
@@ -236,12 +239,12 @@ export default function AuctionRoom() {
             <div className="space-y-6">
               <div>
                 <p className="text-sm font-medium text-text-secondary mb-2">
-                  {auction.status === 'active' ? 'Time Remaining' : 'Auction Status'}
+                  {auction.status === 'active' || (auction.status as string) === 'live' ? 'Time Remaining' : 'Auction Status'}
                 </p>
-                {auction.status === 'active' ? (
+                {auction.status === 'active' || (auction.status as string) === 'live' ? (
                   <Countdown 
                     targetDate={auction.endTime} 
-                    onEnd={() => setAuction(prev => prev ? {...prev, status: 'ended'} : null)} 
+                    onEnd={() => setAuction((prev: Auction | null) => prev ? {...prev, status: 'ended'} : null)} 
                   />
                 ) : (
                   <div className="text-2xl font-bold text-white">Bidding Closed</div>
@@ -251,15 +254,16 @@ export default function AuctionRoom() {
               <div className="pt-6 border-t border-white/10">
                 <p className="text-sm font-medium text-text-secondary mb-2">Current Bid</p>
                 <div className="text-4xl font-bold text-white">
-                  ${auction.currentBid.toLocaleString()}
+                  ${currentHighestBid.toLocaleString()}
                 </div>
               </div>
 
-              {auction.status === 'active' ? (
+              {auction.status === 'active' || (auction.status as string) === 'live' ? (
                 <BidBox 
-                  currentBid={auction.currentBid}
-                  minIncrement={auction.minIncrement || 0}
+                  currentBid={currentHighestBid}
+                  minIncrement={(auction as any).minIncrement || 0}
                   onPlaceBid={handlePlaceBid}
+                  isEnded={auction.status === 'ended' || (auction.status as string) === 'closed'}
                   disabled={!connected}
                 />
               ) : (
@@ -298,7 +302,7 @@ export default function AuctionRoom() {
                   <div className="space-y-4">
                     <p className="text-text-secondary">Winner: <span className="text-white font-bold">{winner.name || (winner as any).fullName}</span></p>
                     <div className="text-4xl font-bold text-success">
-                      ${auction.currentBid.toLocaleString()}
+                      ${currentHighestBid.toLocaleString()}
                     </div>
                     
                     {user?.id === winner.id ? (
@@ -306,7 +310,7 @@ export default function AuctionRoom() {
                         {!showCheckout ? (
                           <>
                             <p className="text-sm text-success font-medium">You won! Please proceed to secure payment.</p>
-                            <Button onClick={handleProceedToPayment} className="w-full">
+                            <Button onClick={handleProceedToPayment} className="w-full py-3" isLoading={false}>
                               Pay Now
                             </Button>
                           </>
@@ -314,7 +318,6 @@ export default function AuctionRoom() {
                           clientSecret && (
                             <Elements options={{ clientSecret }} stripe={stripePromise}>
                               <CheckoutForm 
-                                auctionId={id || ''} 
                                 onSuccess={() => {
                                   setShowCheckout(false);
                                   setShowWinnerModal(false);
@@ -326,13 +329,13 @@ export default function AuctionRoom() {
                         )}
                       </div>
                     ) : (
-                      <Button variant="outline" onClick={() => setShowWinnerModal(false)} className="w-full mt-6">
+                      <Button variant="outline" onClick={() => setShowWinnerModal(false)} className="w-full mt-6 py-2" isLoading={false}>
                         Close
                       </Button>
                     )}
                   </div>
                 ) : (
-                  <Button variant="outline" onClick={() => setShowWinnerModal(false)} className="w-full mt-6">
+                  <Button variant="outline" onClick={() => setShowWinnerModal(false)} className="w-full mt-6 py-2" isLoading={false}>
                     Close
                   </Button>
                 )}

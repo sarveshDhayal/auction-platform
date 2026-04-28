@@ -124,7 +124,7 @@ const LoginRegister: React.FC = () => {
                       placeholder="John Doe" 
                       icon={User}
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
                       required={!isLogin}
                     />
                   </motion.div>
@@ -137,7 +137,7 @@ const LoginRegister: React.FC = () => {
                 placeholder="you@example.com" 
                 icon={Mail}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 required
               />
               
@@ -147,7 +147,7 @@ const LoginRegister: React.FC = () => {
                 placeholder="••••••••" 
                 icon={Lock}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 required
               />
 

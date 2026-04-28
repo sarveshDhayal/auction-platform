@@ -1,15 +1,18 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { User } from '../types';
 
-const AuthContext = createContext({
-  user: null,
-  loading: true,
-  login: () => Promise.resolve(),
-  googleLogin: () => Promise.resolve(),
-  register: () => Promise.resolve(),
-  logout: () => { }
-});
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<any>;
+  googleLogin: (credential: string) => Promise<any>;
+  register: (fullName: string, email: string, password: string) => Promise<any>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -19,9 +22,13 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
   // Validate session on load
@@ -33,7 +40,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const response = await api.get('/auth/me');
+      const response = await api.get<any>('/auth/me');
       setUser(response.data.data.user);
     } catch (error) {
       console.error('Session validation failed:', error);
@@ -57,24 +64,24 @@ export const AuthProvider = ({ children }) => {
     };
   }, [loadUser]);
 
-  const login = async (email, password) => {
+  const login = async (email: string, password: string) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post<any>('/auth/login', { email, password });
       const { user: userData, token } = response.data.data;
 
       localStorage.setItem('token', token);
       setUser(userData);
 
       return userData;
-    } catch (error) {
+    } catch (error: any) {
       const message = error.response?.data?.message || 'Login failed';
       throw new Error(message);
     }
   };
 
-  const googleLogin = async (credential) => {
+  const googleLogin = async (credential: string) => {
     try {
-      const response = await api.post('/auth/google', { credential });
+      const response = await api.post<any>('/auth/google', { credential });
       // The backend returns { status, token, data: { ...user } }
       const token = response.data.token;
       const userData = response.data.data.user;
@@ -83,22 +90,22 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
 
       return userData;
-    } catch (error) {
+    } catch (error: any) {
       const message = error.response?.data?.message || 'Google Login failed';
       throw new Error(message);
     }
   };
 
-  const register = async (fullName, email, password) => {
+  const register = async (fullName: string, email: string, password: string) => {
     try {
-      const response = await api.post('/auth/register', { fullName, email, password });
+      const response = await api.post<any>('/auth/register', { fullName, email, password });
       const { user: userData, token } = response.data.data;
 
       localStorage.setItem('token', token);
       setUser(userData);
 
       return userData;
-    } catch (error) {
+    } catch (error: any) {
       const message = error.response?.data?.message || 'Registration failed';
       throw new Error(message);
     }
@@ -110,7 +117,7 @@ export const AuthProvider = ({ children }) => {
     navigate('/auth');
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     login,
     googleLogin,

@@ -1,12 +1,29 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Clock } from 'lucide-react';
 import { clsx } from 'clsx';
 
-const Countdown = ({ targetDate, onEnd }) => {
-  const calculateTimeLeft = () => {
+interface TimeLeft {
+  d: number;
+  h: number;
+  m: number;
+  s: number;
+}
+
+interface CountdownState {
+  timeLeft: TimeLeft;
+  difference: number;
+}
+
+interface CountdownProps {
+  targetDate: string | Date;
+  onEnd?: () => void;
+}
+
+const Countdown: React.FC<CountdownProps> = ({ targetDate, onEnd }) => {
+  const calculateTimeLeft = (): CountdownState => {
     const difference = +new Date(targetDate) - +new Date();
-    let timeLeft = {};
+    let timeLeft: TimeLeft;
 
     if (difference > 0) {
       timeLeft = {
@@ -21,7 +38,7 @@ const Countdown = ({ targetDate, onEnd }) => {
     return { timeLeft, difference };
   };
 
-  const [time, setTime] = useState(calculateTimeLeft());
+  const [time, setTime] = useState<CountdownState>(calculateTimeLeft());
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -59,7 +76,7 @@ const Countdown = ({ targetDate, onEnd }) => {
       </div>
 
       <div className="flex gap-3">
-        {timeBlocks.map((block, i) => (
+        {timeBlocks.map((block) => (
           <div key={block.label} className="flex flex-col items-center">
             <div className={clsx(
               "w-14 h-14 rounded-lg flex items-center justify-center text-2xl font-bold font-mono border",

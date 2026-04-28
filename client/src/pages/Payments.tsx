@@ -56,8 +56,8 @@ const Payments: React.FC = () => {
                   Your payment for <strong>{checkoutItem?.item}</strong> has been processed. You will receive a confirmation email shortly.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button onClick={() => setIsPaid(false)}>View Transaction History</Button>
-                  <Button variant="outline" onClick={() => navigate('/')}>Return to Dashboard</Button>
+                  <Button onClick={() => setIsPaid(false)} className="px-6 py-2" isLoading={false}>View Transaction History</Button>
+                  <Button variant="outline" onClick={() => navigate('/')} className="px-6 py-2" isLoading={false}>Return to Dashboard</Button>
                 </div>
               </GlassCard>
             </motion.div>
@@ -115,7 +115,7 @@ const Payments: React.FC = () => {
                       </div>
                       <CheckCircle2 className="w-5 h-5 text-primary" />
                     </div>
-                    <Button className="w-full py-4 text-lg" onClick={() => setIsPaid(true)}>
+                    <Button className="w-full py-4 text-lg" onClick={() => setIsPaid(true)} isLoading={false}>
                       Pay Now <ShieldCheck className="w-5 h-5 ml-2" />
                     </Button>
                     <p className="text-center text-xs text-text-secondary">
