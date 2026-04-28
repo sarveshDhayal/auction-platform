@@ -5,6 +5,8 @@ import http from 'http';
 import authRoutes from './routes/auth.js';
 import auctionRoutes from './routes/auctions.js';
 import paymentRoutes from './routes/payments.js';
+import adminRoutes from './routes/admin.js';
+import watchlistRoutes from './routes/watchlist.js';
 import { initSocket } from './socket/bidHandler.js';
 import { startTimerWorker } from './services/timerService.js';
 
@@ -30,6 +32,8 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/watchlist', watchlistRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

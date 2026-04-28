@@ -1,6 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '../config/db.js';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'placeholder');
 
 // Helper to generate JWT Token
 const generateToken = (id) => {
@@ -140,6 +143,78 @@ export const getMe = async (req, res) => {
     });
   } catch (error) {
     console.error('Get Profile Error:', error);
-    res.status(500).json({ status: 'error', message: 'Server error fetching profile' });
+    res.status(500).json({ status: 'error', message: 'Failed to fetch user profile' });
+  }
+};
+
+/**
+ * @desc    Authenticate with Google
+ * @route   POST /api/auth/google
+ * @access  Public
+ */
+export const googleAuth = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    
+    // Verify the Google ID Token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    
+    if (!payload || !payload.email) {
+      return res.status(400).json({ status: 'error', message: 'Invalid Google Token' });
+    }
+
+    const { email, name, picture } = payload;
+
+    // Check if user already exists
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (user) {
+      // User exists, but might have signed up normally. Update them to active just in case
+      if (user.status === 'unverified' || user.status === 'suspended') {
+         // Optionally prevent suspended users, but we'll activate unverified
+         if (user.status === 'unverified') {
+           user = await prisma.user.update({
+             where: { email },
+             data: { status: 'active', authProvider: 'google' }
+           });
+         } else if (user.status === 'suspended') {
+           return res.status(403).json({ status: 'error', message: 'Account is suspended' });
+         }
+      }
+    } else {
+      // Create new user since they don't exist
+      user = await prisma.user.create({
+        data: {
+          email,
+          fullName: name,
+          avatarUrl: picture,
+          status: 'active', // Automatically active if signed up with Google
+          authProvider: 'google'
+        }
+      });
+    }
+
+    // Generate JWT
+    const token = generateToken(user.id);
+
+    res.status(200).json({
+      status: 'success',
+      token,
+      data: {
+        id: user.id,
+        name: user.fullName,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatarUrl
+      }
+    });
+
+  } catch (error) {
+    console.error('Google Auth Error:', error);
+    res.status(500).json({ status: 'error', message: 'Google Authentication Failed' });
   }
 };

@@ -29,6 +29,8 @@ const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [auctions, setAuctions] = useState([]);
+  const [watchlist, setWatchlist] = useState([]);
+  const [activeTab, setActiveTab] = useState('recommended'); // 'recommended' | 'watchlist'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,14 +47,51 @@ const Dashboard = () => {
           watchers: Math.floor(Math.random() * 50) + 1
         }));
         setAuctions(formatted);
+        const watchlistRes = await api.get('/watchlist/my');
+        const formattedWatchlist = watchlistRes.data.data.map(a => ({
+          id: a.id,
+          title: a.title,
+          image: a.imageUrl || 'https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?auto=format&fit=crop&q=80',
+          currentBid: parseFloat(a.currentHighestBid || a.startingPrice),
+          endTime: a.endTime,
+          bids: a.bids?.length || 0,
+          watchers: Math.floor(Math.random() * 50) + 1
+        }));
+        setWatchlist(formattedWatchlist);
+
       } catch (error) {
-        console.error('Failed to fetch auctions:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchAuctions();
+    fetchData();
   }, []);
+
+  const handleToggleWatchlist = async (auctionId, isCurrentlyWatchlisted) => {
+    try {
+      if (isCurrentlyWatchlisted) {
+        await api.delete(`/watchlist/remove/${auctionId}`);
+        setWatchlist(prev => prev.filter(a => a.id !== auctionId));
+      } else {
+        const res = await api.post('/watchlist/add', { auctionId });
+        // Instead of fetching all again, just append the auction from `auctions` array to `watchlist`
+        const targetAuction = auctions.find(a => a.id === auctionId);
+        if (targetAuction) {
+          setWatchlist(prev => [targetAuction, ...prev]);
+        } else {
+           // In case they click from another page, but here we know it's from Dashboard
+           // Fetching single auction could work, but for now just reload
+           const watchlistRes = await api.get('/watchlist/my');
+           // Format omitted for brevity, best to just rely on the array we have
+        }
+      }
+    } catch (err) {
+      console.error('Watchlist toggle error', err);
+    }
+  };
+
+  const displayedAuctions = activeTab === 'recommended' ? auctions : watchlist;
 
   return (
     <div className="flex gap-8">
@@ -78,11 +117,29 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                Recommended Auctions
-              </h2>
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-6">
+                <button 
+                  onClick={() => setActiveTab('recommended')}
+                  className={`text-lg font-bold flex items-center gap-2 pb-4 -mb-[17px] border-b-2 transition-colors ${
+                    activeTab === 'recommended' ? 'text-white border-primary' : 'text-text-secondary border-transparent hover:text-white'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${activeTab === 'recommended' ? 'bg-red-500 animate-pulse' : 'bg-transparent'}`}></div>
+                  Recommended
+                </button>
+                <button 
+                  onClick={() => setActiveTab('watchlist')}
+                  className={`text-lg font-bold flex items-center gap-2 pb-4 -mb-[17px] border-b-2 transition-colors ${
+                    activeTab === 'watchlist' ? 'text-white border-red-500' : 'text-text-secondary border-transparent hover:text-white'
+                  }`}
+                >
+                  My Watchlist
+                  {watchlist.length > 0 && (
+                    <span className="bg-red-500/20 text-red-500 text-xs px-2 py-0.5 rounded-full">{watchlist.length}</span>
+                  )}
+                </button>
+              </div>
               <button className="text-sm font-medium text-primary hover:text-white transition-colors flex items-center">
                 View All <ChevronRight className="w-4 h-4" />
               </button>
@@ -90,19 +147,21 @@ const Dashboard = () => {
             
             {loading ? (
               <div className="text-center text-text-secondary py-10">Loading auctions...</div>
-            ) : auctions.length > 0 ? (
+            ) : displayedAuctions.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {auctions.map((auction) => (
-                  <AuctionCard 
-                    key={auction.id} 
-                    auction={auction} 
-                    onClick={() => navigate(`/auction/${auction.id}`)}
-                  />
+                {displayedAuctions.map((auction) => (
+                  <div key={auction.id} onClick={() => navigate(`/auction/${auction.id}`)} className="cursor-pointer">
+                    <AuctionCard 
+                      auction={auction} 
+                      isWatchlisted={watchlist.some(w => w.id === auction.id)}
+                      onToggleWatchlist={handleToggleWatchlist}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
               <div className="text-center text-text-secondary py-10 border border-white/5 rounded-xl bg-white/5">
-                No active auctions found. Be the first to create one!
+                {activeTab === 'recommended' ? 'No active auctions found. Be the first to create one!' : 'Your watchlist is empty. Click the heart icon on any auction to save it!'}
               </div>
             )}
           </div>

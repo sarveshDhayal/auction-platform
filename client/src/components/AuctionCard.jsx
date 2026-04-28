@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Clock, Users, ArrowUpRight } from 'lucide-react';
+import { Clock, Users, ArrowUpRight, Heart } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import Badge from './ui/Badge';
 
-const AuctionCard = ({ auction }) => {
+const AuctionCard = ({ auction, isWatchlisted, onToggleWatchlist }) => {
   return (
     <GlassCard hoverEffect className="group p-4 flex flex-col h-full">
       <div className="relative rounded-xl overflow-hidden mb-4 aspect-video">
@@ -12,13 +12,27 @@ const AuctionCard = ({ auction }) => {
           alt={auction.title} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-2 right-2 flex flex-col gap-2">
           {auction.status === 'live' && (
             <div className="flex items-center gap-1.5 bg-danger/90 text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-lg shadow-danger/30 backdrop-blur-md">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
               LIVE
             </div>
           )}
+          <button 
+            onClick={(e) => {
+              e.preventDefault(); // Prevent navigating if wrapped in a link elsewhere
+              e.stopPropagation(); // Stop triggering card click
+              if(onToggleWatchlist) onToggleWatchlist(auction.id, isWatchlisted);
+            }}
+            className={`flex items-center justify-center w-8 h-8 rounded-full backdrop-blur-md transition-all ${
+              isWatchlisted 
+                ? 'bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500/30' 
+                : 'bg-black/40 text-white border border-white/20 hover:bg-white/20'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${isWatchlisted ? 'fill-current' : ''}`} />
+          </button>
         </div>
       </div>
 
