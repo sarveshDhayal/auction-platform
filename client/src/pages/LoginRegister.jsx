@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleLogin } from '@react-oauth/google';
@@ -10,6 +11,7 @@ const LoginRegister = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const { login, register, googleLogin } = useAuth();
+  const navigate = useNavigate();
 
   // Form State
   const [name, setName] = useState('');
@@ -22,6 +24,7 @@ const LoginRegister = () => {
     setError('');
     try {
       await googleLogin(credentialResponse.credential);
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Google login failed');
     } finally {
@@ -41,6 +44,7 @@ const LoginRegister = () => {
         if (!name) throw new Error('Name is required');
         await register(name, email, password);
       }
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Authentication failed');
     } finally {

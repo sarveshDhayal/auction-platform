@@ -59,10 +59,10 @@ export const registerUser = async (req, res) => {
       data: {
         user: {
           id: user.id,
-          fullName: user.fullName,
+          name: user.fullName,
           email: user.email,
           role: user.role,
-          avatarUrl: user.avatarUrl
+          avatar: user.avatarUrl
         },
         token: generateToken(user.id)
       }
@@ -112,10 +112,10 @@ export const loginUser = async (req, res) => {
       data: {
         user: {
           id: user.id,
-          fullName: user.fullName,
+          name: user.fullName,
           email: user.email,
           role: user.role,
-          avatarUrl: user.avatarUrl
+          avatar: user.avatarUrl
         },
         token: generateToken(user.id)
       }
@@ -138,7 +138,13 @@ export const getMe = async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        user: req.user
+        user: {
+          id: req.user.id,
+          name: req.user.fullName,
+          email: req.user.email,
+          role: req.user.role,
+          avatar: req.user.avatarUrl
+        }
       }
     });
   } catch (error) {
