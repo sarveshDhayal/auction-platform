@@ -32,7 +32,8 @@ class ApiService {
     this.client.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('token');
-        if (token) {
+        // Harden token check to prevent sending "undefined" or "null" strings
+        if (token && token !== 'undefined' && token !== 'null' && token.trim() !== '') {
           config.headers.Authorization = `Bearer ${token}`;
         }
         return config;

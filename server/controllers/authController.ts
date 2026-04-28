@@ -20,7 +20,7 @@ class AuthController extends BaseController {
    */
   private generateToken(id: string): string {
     return jwt.sign({ id }, process.env.JWT_SECRET!, {
-      expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any,
+      expiresIn: (process.env.JWT_EXPIRE || '7d') as any,
     });
   }
 

@@ -58,34 +58,45 @@ const Settings: React.FC = () => {
           {/* Settings Content */}
           <div className="flex-1">
             {activeTab === 'profile' && (
-              <GlassCard className="p-8">
-                <h3 className="text-xl font-bold text-white mb-6">Profile Information</h3>
+              <GlassCard className="p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Profile Information</h3>
+                    <p className="text-sm text-text-secondary">Update your personal details and how others see you.</p>
+                  </div>
+                </div>
                 
-                <div className="flex items-center gap-6 mb-8">
-                  <div className="relative group cursor-pointer">
+                <div className="flex flex-col sm:flex-row items-center gap-8 mb-10 p-6 rounded-2xl bg-white/5 border border-white/5">
+                  <div className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
                     <img 
                       src={(user as any)?.avatar || 'https://ui-avatars.com/api/?name=' + ((user as any)?.name || 'User')} 
                       alt="Profile" 
-                      className="w-24 h-24 rounded-full border-2 border-primary/50 object-cover"
+                      className="relative w-28 h-28 rounded-full border-2 border-background object-cover shadow-2xl"
                     />
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera className="w-6 h-6 text-white" />
+                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <Camera className="w-8 h-8 text-white" />
                     </div>
                   </div>
-                  <div>
-                    <h4 className="text-lg font-medium text-white mb-1">Avatar Image</h4>
-                    <p className="text-sm text-text-secondary mb-3">JPG, GIF or PNG. Max size of 5MB.</p>
-                    <div className="flex gap-3">
-                      <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors border border-white/10">Upload New</button>
-                      <button className="px-4 py-2 text-danger hover:bg-danger/10 text-sm font-medium rounded-lg transition-colors border border-transparent hover:border-danger/20">Remove</button>
+                  <div className="flex-1 text-center sm:text-left">
+                    <h4 className="text-lg font-semibold text-white mb-1">Avatar Image</h4>
+                    <p className="text-sm text-text-secondary mb-5 max-w-xs">Update your profile picture. High-res JPG, GIF or PNG works best (Max 5MB).</p>
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-3">
+                      <button className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-primary/20">
+                        Upload New
+                      </button>
+                      <button className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white text-sm font-semibold rounded-xl border border-white/10 transition-all">
+                        Remove
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <form className="space-y-8" onSubmit={(e) => e.preventDefault()}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input 
                       label="Full Name" 
+                      placeholder="Enter your full name"
                       value={name} 
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)} 
                       icon={User}
@@ -93,18 +104,19 @@ const Settings: React.FC = () => {
                     <Input 
                       label="Email Address" 
                       type="email"
+                      placeholder="your@email.com"
                       value={email} 
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} 
                       icon={Mail}
                       disabled
                     />
                   </div>
-                  <div className="pt-4 border-t border-white/10 flex justify-end gap-3">
+                  <div className="pt-6 border-t border-white/10 flex justify-end gap-4">
                     <Button variant="outline" type="button" onClick={() => {
                       setName((user as any)?.name || '');
                       setEmail((user as any)?.email || '');
-                    }} className="px-4 py-2" isLoading={false}>Cancel</Button>
-                    <Button type="submit" className="px-6 py-2" isLoading={false}>Save Changes</Button>
+                    }} className="px-6 py-2.5" isLoading={false}>Cancel</Button>
+                    <Button type="submit" className="px-8 py-2.5" isLoading={false}>Save Changes</Button>
                   </div>
                 </form>
               </GlassCard>

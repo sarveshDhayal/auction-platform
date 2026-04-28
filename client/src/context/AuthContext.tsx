@@ -34,7 +34,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Validate session on load
   const loadUser = useCallback(async () => {
     const token = localStorage.getItem('token');
-    if (!token) {
+    if (!token || token === 'undefined' || token === 'null') {
+      if (token) localStorage.removeItem('token'); // Clean up bad strings
       setLoading(false);
       return;
     }
@@ -82,9 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const googleLogin = async (credential: string) => {
     try {
       const response = await api.post<any>('/auth/google', { credential });
-      // The backend returns { status, token, data: { ...user } }
-      const token = response.data.token;
-      const userData = response.data.data.user;
+      const { user: userData, token } = response.data.data;
 
       localStorage.setItem('token', token);
       setUser(userData);

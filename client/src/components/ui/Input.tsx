@@ -27,7 +27,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({ className, label, erro
           ref={ref}
           className={cn(
             "glass-input w-full",
-            Icon && "pl-10",
+            Icon ? "pl-11" : "pl-4", // Explicitly set left padding when icon exists
+            "pr-4", // Ensure right padding is consistent
             error && "border-danger/50 focus:border-danger focus:ring-danger/50",
             className as string
           )}

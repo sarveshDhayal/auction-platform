@@ -1,7 +1,10 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, BrowserRouter } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import { AuthProvider } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -15,7 +18,7 @@ import BiddingHistory from './pages/BiddingHistory';
 import Payments from './pages/Payments';
 import Settings from './pages/Settings';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen text-text-primary">
       <Navbar />
@@ -67,6 +70,20 @@ const App: React.FC = () => {
       <Footer />
     </div>
   );
-}
+};
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <SocketProvider>
+          <GoogleOAuthProvider clientId={(import.meta.env.VITE_GOOGLE_CLIENT_ID as string) || "946106601149-r7vnsqf7h3ilcgo1kga8ju1uc5mitrt1.apps.googleusercontent.com"}>
+            <AppContent />
+          </GoogleOAuthProvider>
+        </SocketProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+};
 
 export default App;
