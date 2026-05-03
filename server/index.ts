@@ -8,6 +8,7 @@ import paymentRoutes from './routes/payments';
 import adminRoutes from './routes/admin';
 import watchlistRoutes from './routes/watchlist';
 import bidRoutes from './routes/bids';
+import { handleStripeWebhook } from './controllers/webhookController';
 import { initSocket } from './socket/bidHandler';
 import { startTimerWorker } from './services/timerService';
 
@@ -21,6 +22,9 @@ initSocket(server);
 
 // Start the Redis Polling Timer Service
 startTimerWorker();
+
+// ⚠️  Stripe webhook MUST be before express.json() — needs raw body for signature verification
+app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // Middleware
 app.use(cors({

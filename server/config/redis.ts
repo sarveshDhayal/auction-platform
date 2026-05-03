@@ -14,9 +14,7 @@ const redis = new Redis(REDIS_URL, {
   maxRetriesPerRequest: 50,
 });
 
-redis.on('connect', () => {
-  // console.log('✅ Connected to Redis');
-});
+redis.on('connect', () => {});
 
 redis.on('error', (err: Error) => {
   console.error('❌ Redis Connection Error:', err.message);

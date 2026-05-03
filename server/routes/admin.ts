@@ -1,12 +1,6 @@
 import express from 'express';
 import { protect, adminOnly } from '../middleware/auth';
-import { 
-  getPlatformStats, 
-  getAllUsers, 
-  updateUserStatus, 
-  deleteFraudulentAuction, 
-  closeAuctionManually 
-} from '../controllers/adminController';
+import adminController from '../controllers/adminController';
 
 const router = express.Router();
 
@@ -14,14 +8,14 @@ const router = express.Router();
 router.use(protect, adminOnly);
 
 // Stats
-router.get('/stats', getPlatformStats);
+router.get('/stats', adminController.getPlatformStats);
 
 // Users
-router.get('/users', getAllUsers);
-router.patch('/users/:id/status', updateUserStatus);
+router.get('/users', adminController.getAllUsers);
+router.patch('/users/:id/status', adminController.updateUserStatus);
 
 // Auctions
-router.delete('/auctions/:id', deleteFraudulentAuction);
-router.post('/auctions/:id/close', closeAuctionManually);
+router.delete('/auctions/:id', adminController.deleteFraudulentAuction);
+router.post('/auctions/:id/close', adminController.closeAuctionManually);
 
 export default router;

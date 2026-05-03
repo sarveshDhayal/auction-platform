@@ -24,7 +24,10 @@ export const auctionSchema = z.object({
   endTime: z.string().refine((val) => new Date(val) > new Date(), {
     message: "End time must be in the future"
   }),
-  requiresPaymentVerification: z.boolean().default(true)
+  requiresPaymentVerification: z.preprocess((val) => {
+    if (typeof val === 'string') return val === 'true';
+    return val;
+  }, z.boolean()).default(true)
 });
 
 export const bidSchema = z.object({

@@ -5,21 +5,35 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+const hasCloudinaryConfig =
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET;
 
-// Configure Multer Storage for Cloudinary
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'bidmaster_auctions', // Folder name in Cloudinary
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 1200, height: 800, crop: 'limit' }] // Optimize upload size
-  } as any,
-});
+let storage: multer.StorageEngine;
 
-export const upload = multer({ storage: storage });
+if (hasCloudinaryConfig) {
+  // Configure Cloudinary only when credentials are present
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
+  storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'bidmaster_auctions',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+      transformation: [{ width: 1200, height: 800, crop: 'limit' }],
+    } as any,
+  });
+
+  console.log('✅ Cloudinary storage configured');
+} else {
+  // Fallback: store in memory (file won't be persisted, imageUrl will be null)
+  storage = multer.memoryStorage();
+  console.warn('⚠️  CLOUDINARY credentials not set — image uploads disabled. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET to .env');
+}
+
+export const upload = multer({ storage });

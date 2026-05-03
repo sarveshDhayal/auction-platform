@@ -1,88 +1,86 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { createAuctionPaymentIntent } from '../services/stripeService';
 import { prisma } from '../config/db';
+import BaseController from './baseController';
 
-/**
- * @desc    Create a Stripe PaymentIntent for a won auction
- * @route   POST /api/payments/create-intent
- * @access  Private (Winner only)
- */
-export const createPaymentIntent = async (req: any, res: Response) => {
-  try {
-    const { auctionId } = req.body;
-    const userId = req.user.id;
+class PaymentController extends BaseController {
+  /**
+   * @desc    Create a Stripe PaymentIntent for a won auction
+   * @route   POST /api/payments/create-intent
+   */
+  public createPaymentIntent = async (req: any, res: Response) => {
+    try {
+      const { auctionId } = req.body;
+      const userId = req.user.id;
 
-    if (!auctionId) {
-      return res.status(400).json({ status: 'error', message: 'Auction ID is required' });
-    }
-
-    const paymentIntent = await createAuctionPaymentIntent(auctionId, userId);
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        clientSecret: paymentIntent.client_secret
+      if (!auctionId) {
+        return this.sendError(res, 'Auction ID is required', 400);
       }
-    });
 
-  } catch (error: any) {
-    console.error('Payment Controller Error:', error);
-    res.status(500).json({ status: 'error', message: error.message || 'Failed to initialize payment' });
-  }
-};
+      const paymentIntent = await createAuctionPaymentIntent(auctionId, userId);
 
-/**
- * @desc    Handle successful payment (Usually done via Webhook, but a simple confirmation endpoint works for MVP)
- * @route   POST /api/payments/confirm
- * @access  Private
- */
-export const confirmPayment = async (req: Request, res: Response) => {
-  try {
-    const { paymentIntentId } = req.body;
+      return this.sendSuccess(res, {
+        clientSecret: paymentIntent.client_secret
+      });
 
-    const transaction = await prisma.transaction.findUnique({
-      where: { stripePaymentIntentId: paymentIntentId }
-    });
-
-    if (!transaction) {
-      return res.status(404).json({ status: 'error', message: 'Transaction not found' });
+    } catch (error: any) {
+      return this.sendError(res, error.message || 'Failed to initialize payment', 500, error);
     }
+  };
 
-    // Mark as completed
-    await prisma.transaction.update({
-      where: { id: transaction.id },
-      data: { status: 'completed' }
-    });
+  /**
+   * @desc    Handle successful payment
+   * @route   POST /api/payments/confirm
+   */
+  public confirmPayment = async (req: any, res: Response) => {
+    try {
+      const { paymentIntentId } = req.body;
 
-    res.status(200).json({ status: 'success', message: 'Payment confirmed successfully' });
-  } catch (error) {
-    res.status(500).json({ status: 'error', message: 'Failed to confirm payment' });
-  }
-};
+      const transaction = await prisma.transaction.findUnique({
+        where: { stripePaymentIntentId: paymentIntentId }
+      });
 
-/**
- * @desc    Get all transactions for the current user
- * @route   GET /api/payments/history
- * @access  Private
- */
-export const getTransactions = async (req: any, res: Response) => {
-  try {
-    const userId = req.user.id;
+      if (!transaction) {
+        return this.sendError(res, 'Transaction not found', 404);
+      }
 
-    const transactions = await prisma.transaction.findMany({
-      where: { buyerId: userId },
-      include: {
-        auction: {
-          select: {
-            title: true
+      const updatedTransaction = await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: { status: 'completed' }
+      });
+
+      return this.sendSuccess(res, updatedTransaction, 200, 'Payment confirmed successfully');
+    } catch (error) {
+      return this.sendError(res, 'Failed to confirm payment', 500, error);
+    }
+  };
+
+  /**
+   * @desc    Get all transactions for the current user
+   * @route   GET /api/payments/history
+   */
+  public getTransactions = async (req: any, res: Response) => {
+    try {
+      const userId = req.user.id;
+
+      const transactions = await prisma.transaction.findMany({
+        where: { buyerId: userId },
+        include: {
+          auction: {
+            select: {
+              title: true
+            }
           }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+        },
+        orderBy: { createdAt: 'desc' }
+      });
 
-    res.status(200).json({ status: 'success', data: transactions });
-  } catch (error) {
-    res.status(500).json({ status: 'error', message: 'Failed to fetch transactions' });
-  }
-};
+      return this.sendSuccess(res, transactions);
+    } catch (error) {
+      return this.sendError(res, 'Failed to fetch transactions', 500, error);
+    }
+  };
+}
+
+export default new PaymentController();
+
